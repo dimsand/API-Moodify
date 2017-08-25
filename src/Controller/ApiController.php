@@ -33,7 +33,7 @@ class ApiController extends AppController
 
     public function beforeFilter(Event $event)
     {
-        //header('Content-Type: application/json');
+        header('Content-Type: application/json');
         $this->autoRender = false;
         $this->layoutAjax = true;
         $this->viewBuilder()->setLayout('json');
@@ -73,6 +73,7 @@ class ApiController extends AppController
         die(json_encode($this->data));
     }
 
+    // Alternative de la weather
     public function home2($ville = null)
     {
         if (!$this->_isTokenValid()) {
@@ -94,113 +95,6 @@ class ApiController extends AppController
         }
         die(json_encode($this->data));
     }
-
-    public function drinks($taste = null)
-    {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
-        if (is_null($taste)) {
-            $this->_errorParameter('taste (type de boisson : fraiche, épicée, ...)');
-            return;
-        } else {
-            $http = new Client();
-
-            $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
-            $responseAlcohol = $http->get($urlAlcohol);
-            if($responseAlcohol->json['totalResult'] == 0){
-                $this->_errorRetourApi($urlAlcohol);
-                return;
-            }
-            $nbAlcohol = count($responseAlcohol->json['result']) - 1;
-            $nAlcohol = rand(0, $nbAlcohol);
-
-            $this->data['returns']['drink_alcohol'] = $responseAlcohol->json['result'][$nAlcohol];
-
-            $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
-            $responseNotAlcohol = $http->get($urlNotAlcohol);
-            if($responseNotAlcohol->json['totalResult'] == 0){
-                $this->_errorRetourApi($urlNotAlcohol);
-                return;
-            }
-            $nbNotAlcohol = count($responseNotAlcohol->json['result']) - 1;
-            $nNotAlcohol = rand(0, $nbNotAlcohol);
-
-            $this->data['returns']['drink_not_alcohol'] = $responseNotAlcohol->json['result'][$nNotAlcohol];
-        }
-        die(json_encode($this->data));
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// FONCTIONS TRAITEMENT INTERNE API
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // ----------------------------------------------------------------------------------------------------------------
-    public function getToken()
-    {
-        $in = $this->request->data;     // En POST
-        $in = $this->request->query;    // En GET
-
-        if (empty($in['email']) or empty($in['password'])) {
-            $this->_notAuthenticated();
-            return;
-        }
-
-        $email = $in['email'];
-        $password = Security::hash($in['password'], 'sha1', true);
-
-        // Vérif du user/mot de passe
-        $users_table = TableRegistry::get('users');
-        $user = $users_table->find('all')
-            ->where(['email' => $email, 'password' => $password])
-            ->first();
-
-        if (empty($user)) {
-            $this->_notAuthenticated();
-            return;
-        }
-        $token = $this->TokenGenerator->generate($user->id, "+6 days +0 hours");
-        $this->data['returns']['token'] = $token;
-        die(json_encode($this->data));
-    }
-
-    private function _isTokenValid()
-    {
-        $in = $this->request->data;     // En POST
-        $in = $this->request->query;    // En GET
-        if (!empty($in['token'])) {
-            // Décode le token
-            if($this->TokenGenerator->read($in['token'])){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function _notAuthenticated()
-    {
-        $this->data['return_code'] = self::RETURN_CODE_ERROR_AUTH;
-        $this->data['error'] = "Echec lors de l'authentification";
-        die(json_encode($this->data));
-    }
-
-    private function _errorParameter($missing_param)
-    {
-        $this->data['return_code'] = self::RETURN_CODE_ERROR_MISSING_PARAMETER;
-        $this->data['error'] = "Paramètre '$missing_param' manquant";
-        die(json_encode($this->data));
-    }
-
-    private function _errorRetourApi($url_api, $error_supp = "")
-    {
-        $this->data['return_code'] = self::RETURN_CODE_ERROR_RETOUR_API;
-        $this->data['error'] = "L'API n'a retourné aucune données, ou une donnée non valide. (URL : ".$url_api."). ".((!empty($error_supp))?"Infos erreur supp : ".$error_supp:"");
-        die(json_encode($this->data));
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
@@ -345,15 +239,31 @@ class ApiController extends AppController
         return $data;
     }
 
-    public function getRecipeRandom()
+    public function getRecipeRandom($ingredient = 'citron')
     {
         if (!$this->_isTokenValid()) {
             $this->_notAuthenticated();
             return;
         }
+        if (is_null($ingredient)) {
+            $this->_errorParameter('ingredient');
+            return;
+        }
         $data = array();
         $http = new Client();
-
+        $url ="http://food2fork.com/api/search?key=".self::API_KEY_FOOD."&Accept=application/json&q=".$ingredient;
+        $responseFood = $http->get($url);
+        if($responseFood->json['count'] == 0){
+            $this->_errorRetourApi($url);
+            return;
+        }else{
+            for($i=0; $i<4; $i++){
+                $data['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
+                $data['title'] = $responseFood->json['recipes'][$i]['title'];
+                $data['image'] = $responseFood->json['recipes'][$i]['image_url'];
+                $data['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
+            }
+        }
         return $data;
     }
 
@@ -601,7 +511,7 @@ class ApiController extends AppController
             return;
         }else{
             foreach ($recettes as $recetteId){
-                $response = $http->post('https://cors-anywhere.herokuapp.com/http://food2fork.com/api/get', [
+                $response = $http->post('http://food2fork.com/api/get', [
                     'key' => self::API_KEY_FOOD,
                     'rId' => $recetteId,
                     'Accept' => 'application/json'
@@ -614,6 +524,113 @@ class ApiController extends AppController
             }
         }
         return $data;
+    }
+
+    public function drinks($taste = null)
+    {
+        if (!$this->_isTokenValid()) {
+            $this->_notAuthenticated();
+            return;
+        }
+        if (is_null($taste)) {
+            $this->_errorParameter('taste (type de boisson : fraiche, épicée, ...)');
+            return;
+        } else {
+            $http = new Client();
+
+            $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
+            $responseAlcohol = $http->get($urlAlcohol);
+            if($responseAlcohol->json['totalResult'] == 0){
+                $this->_errorRetourApi($urlAlcohol);
+                return;
+            }
+            $nbAlcohol = count($responseAlcohol->json['result']) - 1;
+            $nAlcohol = rand(0, $nbAlcohol);
+
+            $this->data['returns']['drink_alcohol'] = $responseAlcohol->json['result'][$nAlcohol];
+
+            $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
+            $responseNotAlcohol = $http->get($urlNotAlcohol);
+            if($responseNotAlcohol->json['totalResult'] == 0){
+                $this->_errorRetourApi($urlNotAlcohol);
+                return;
+            }
+            $nbNotAlcohol = count($responseNotAlcohol->json['result']) - 1;
+            $nNotAlcohol = rand(0, $nbNotAlcohol);
+
+            $this->data['returns']['drink_not_alcohol'] = $responseNotAlcohol->json['result'][$nNotAlcohol];
+        }
+        die(json_encode($this->data));
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    /// FONCTIONS TRAITEMENT INTERNE API
+    ///
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // ----------------------------------------------------------------------------------------------------------------
+    public function getToken()
+    {
+        $in = $this->request->data;     // En POST
+        $in = $this->request->query;    // En GET
+
+        if (empty($in['email']) or empty($in['password'])) {
+            $this->_notAuthenticated();
+            return;
+        }
+
+        $email = $in['email'];
+        $password = Security::hash($in['password'], 'sha1', true);
+
+        // Vérif du user/mot de passe
+        $users_table = TableRegistry::get('users');
+        $user = $users_table->find('all')
+            ->where(['email' => $email, 'password' => $password])
+            ->first();
+
+        if (empty($user)) {
+            $this->_notAuthenticated();
+            return;
+        }
+        $token = $this->TokenGenerator->generate($user->id, "+6 days +0 hours");
+        $this->data['returns']['token'] = $token;
+        die(json_encode($this->data));
+    }
+
+    private function _isTokenValid()
+    {
+        $in = $this->request->data;     // En POST
+        $in = $this->request->query;    // En GET
+        if (!empty($in['token'])) {
+            // Décode le token
+            if($this->TokenGenerator->read($in['token'])){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function _notAuthenticated()
+    {
+        $this->data['return_code'] = self::RETURN_CODE_ERROR_AUTH;
+        $this->data['error'] = "Echec lors de l'authentification";
+        die(json_encode($this->data));
+    }
+
+    private function _errorParameter($missing_param)
+    {
+        $this->data['return_code'] = self::RETURN_CODE_ERROR_MISSING_PARAMETER;
+        $this->data['error'] = "Paramètre '$missing_param' manquant";
+        die(json_encode($this->data));
+    }
+
+    private function _errorRetourApi($url_api, $error_supp = "")
+    {
+        $this->data['return_code'] = self::RETURN_CODE_ERROR_RETOUR_API;
+        $this->data['error'] = "L'API n'a retourné aucune données, ou une donnée non valide. (URL : ".$url_api."). ".((!empty($error_supp))?"Infos erreur supp : ".$error_supp:"");
+        die(json_encode($this->data));
     }
 
 }
