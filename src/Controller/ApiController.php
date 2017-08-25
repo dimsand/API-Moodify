@@ -90,7 +90,7 @@ class ApiController extends AppController
                 $this->data['returns']['drink_not_alcohol'] = $this->getNotAlcoholDrink2($this->data['returns']['weather']['condition_key']);
                 $this->data['returns']['recipe'] = $this->getRecipeRandom();
                 $this->data['returns']['series'] = $this->getSeriesRandom();
-                $this->data['returns']['activity'] = $this->getActivityByWeather($this->data['returns']['weather']['condition_key']);
+                $this->data['returns']['activity'] = $this->getActivityByWeather2($this->data['returns']['weather']['condition_key']);
             }
         }
         die(json_encode($this->data));
@@ -325,6 +325,41 @@ class ApiController extends AppController
         return $data;
     }
 
+    public function getActivityByWeather2($weather_condition_key)
+    {
+        if (!$this->_isTokenValid()) {
+            $this->_notAuthenticated();
+            return;
+        }
+        if (is_null($weather_condition_key)) {
+            $this->_errorParameter('weather_condition_key (Snow, Rainy)');
+            return;
+        }else{
+            $weather = $this->_getWeatherByConditionWeather2($weather_condition_key);
+            $data = array();
+            $activities_table = TableRegistry::get('activity');
+            $activities = $activities_table->find('all')
+                ->where(['weather' => $weather])
+                ->toArray();
+            if(empty($activities)){
+                $this->_errorRetourApi(null);
+                return;
+            }else{
+                $activity1 = rand(0, (count($activities)-1));
+                array_push($data, $activities[$activity1]->name);
+                $same_activity = true;
+                while($same_activity){
+                    $activity2 = rand(0, (count($activities)-1));
+                    if($activities[$activity1]->name != $activities[$activity2]->name){
+                        $same_activity = false;
+                    }
+                }
+                array_push($data, $activities[$activity2]->name);
+            }
+        }
+        return $data;
+    }
+
     private function _getTasteByConditionWeather($condition_key)
     {
         $taste = null;
@@ -460,6 +495,30 @@ class ApiController extends AppController
             $taste = "bitter";
         }else if(($condition_key >= 801 && $condition_key <= 804)){
             $taste = "fruity";
+        }else{
+            $taste = "sweet";
+        }
+
+        return $taste;
+    }
+
+    private function _getWeatherByConditionWeather2($condition_key)
+    {
+        $taste = null;
+        if(($condition_key >= 200 && $condition_key <= 232) || ($condition_key >= 300 && $condition_key <= 321)){
+            $taste = "Rainy";
+        }else if(($condition_key == 800)){
+            $taste = "Sunny";
+        }else if(($condition_key >= 300 && $condition_key <= 321)){
+            $taste = "Rainy";
+        }else if(($condition_key >= 500 && $condition_key <= 531)){
+            $taste = "Rainy";
+        }else if(($condition_key >= 600 && $condition_key <= 622)){
+            $taste = "Snow";
+        }else if(($condition_key >= 701 && $condition_key <= 781)){
+            $taste = "Windy";
+        }else if(($condition_key >= 801 && $condition_key <= 804)){
+            $taste = "Windy";
         }else{
             $taste = "sweet";
         }

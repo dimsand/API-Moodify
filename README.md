@@ -1,6 +1,6 @@
 # API Moodify
 
-API renvoyant les données nécessaires à l'utilisation de l'application[Moodify](https://github.com/It-DreamTeam/Vox-Populi-Application)
+API renvoyant les données nécessaires à l'utilisation de l'application [Moodify](https://github.com/It-DreamTeam/Vox-Populi-Application)
 
 ## Utilisation
 
@@ -14,6 +14,8 @@ API renvoyant les données nécessaires à l'utilisation de l'application[Moodif
     - 1 série au hasard
     - 1 boisson alcoolisé et 1 boisson non alcoolisé (en fonction de la météo)
     - 1 activité (en fonction de la météo)
+    
+- Si la précédente requête ne fonctionne pas (à cause de l'API météo retournant une erreur), faire appel à une autre API météo [OpenWeatherMap](https://openweathermap.org/weather-conditions) : ```[GET] /home2/{ville}?{token}```
     
 
 
