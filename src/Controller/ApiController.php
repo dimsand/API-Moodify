@@ -257,7 +257,7 @@ class ApiController extends AppController
     {
         $data = array();
         $http = new Client();
-        
+
         $taste = $this->_getTasteByConditionWeather($condition_key);
         list($period_date, $with_ice_cubes) = $this->_getPeriodDate();
 
