@@ -62,13 +62,13 @@ class ApiController extends AppController
             return;
         } else {
             $this->data['returns']['weather'] = $this->getWeather($ville);
-            if (!empty($this->getWeather($ville))) {
+            if (!empty($this->data['returns']['weather'])) {
                 $this->data['returns']['drink_alcohol'] = $this->getAlcoholDrink($this->data['returns']['weather']['condition_key']);
                 $this->data['returns']['drink_not_alcohol'] = $this->getNotAlcoholDrink($this->data['returns']['weather']['condition_key']);
-                $this->data['returns']['recipe'] = $this->getRecipeRandom();
-                $this->data['returns']['series'] = $this->getSeriesRandom();
                 $this->data['returns']['activity'] = $this->getActivityByWeather($this->data['returns']['weather']['condition_key']);
             }
+            $this->data['returns']['recipe'] = $this->getRecipeRandom();
+            $this->data['returns']['series'] = $this->getSeriesRandom();
         }
         die(json_encode($this->data));
     }
@@ -85,13 +85,13 @@ class ApiController extends AppController
             return;
         } else {
             $this->data['returns']['weather'] = $this->getWeather2($ville);
-            if (!empty($this->getWeather2($ville))) {
+            if (!empty($this->data['returns']['weather'])) {
                 $this->data['returns']['drink_alcohol'] = $this->getAlcoholDrink2($this->data['returns']['weather']['condition_key']);
                 $this->data['returns']['drink_not_alcohol'] = $this->getNotAlcoholDrink2($this->data['returns']['weather']['condition_key']);
-                $this->data['returns']['recipe'] = $this->getRecipeRandom();
-                $this->data['returns']['series'] = $this->getSeriesRandom();
                 $this->data['returns']['activity'] = $this->getActivityByWeather2($this->data['returns']['weather']['condition_key']);
             }
+            $this->data['returns']['recipe'] = $this->getRecipeRandom();
+            $this->data['returns']['series'] = $this->getSeriesRandom();
         }
         die(json_encode($this->data));
     }
