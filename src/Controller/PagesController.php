@@ -67,12 +67,5 @@ class PagesController extends AppController
             }
             throw new NotFoundException();
         }
-        // Vérif du user/mot de passe
-        $users_table = TableRegistry::get('users');
-        //debug($users_table); exit();
-        $user = $users_table->find('all')
-            ->where(['email' => "api@api.com", 'password' => Security::hash("api", 'sha1', true)])
-            ->first();
-        debug($user);
     }
 }

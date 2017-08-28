@@ -53,10 +53,6 @@ class ApiController extends AppController
      */
     public function home($ville = null)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if (is_null($ville)) {
             $this->_errorParameter('ville');
             return;
@@ -76,10 +72,6 @@ class ApiController extends AppController
     // Alternative de la weather
     public function home2($ville = null)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if (is_null($ville)) {
             $this->_errorParameter('ville');
             return;
@@ -99,10 +91,6 @@ class ApiController extends AppController
     // Retourne la recette en fonction de l'ID/des ID de la/les recette en paramètre
     public function recipe($recettes = null)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         $http = new Client();
         if(empty($recettes)) {
             $this->_errorParameter('recettes (id des recettes à afficher)');
@@ -128,10 +116,6 @@ class ApiController extends AppController
     // Retourne 4 recettes aléatoires
     public function recipes($ingredients = null)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if(empty($ingredients)) {
             $this->_errorParameter('ingredient');
             return;
@@ -144,10 +128,6 @@ class ApiController extends AppController
     // Retourne 1 boisson alcoolisée et une boisson non alcoolisée aléatoire
     public function drinks($taste = null)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if (is_null($taste)) {
             $this->_errorParameter('taste (type de boisson : fraiche, épicée, ...)');
             return;
@@ -183,10 +163,6 @@ class ApiController extends AppController
 
     public function serie()
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         $http = new Client();
         $url ="https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
         $responseSerie = $http->get($url);
@@ -352,10 +328,6 @@ class ApiController extends AppController
 
     public function getRecipeRandom($ingredient = 'citron')
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if (is_null($ingredient)) {
             $this->_errorParameter('ingredient');
             return;
@@ -384,10 +356,6 @@ class ApiController extends AppController
 
     public function getSeriesRandom()
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         $data = array();
         $http = new Client();
         $url ="https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
@@ -411,10 +379,6 @@ class ApiController extends AppController
 
     public function getActivityByWeather($weather_condition_key)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if (is_null($weather_condition_key)) {
             $this->_errorParameter('weather_condition_key (Snow, Rainy)');
             return;
@@ -446,10 +410,6 @@ class ApiController extends AppController
 
     public function getActivityByWeather2($weather_condition_key)
     {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
         if (is_null($weather_condition_key)) {
             $this->_errorParameter('weather_condition_key (Snow, Rainy)');
             return;
@@ -684,10 +644,9 @@ class ApiController extends AppController
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // ----------------------------------------------------------------------------------------------------------------
-    public function getToken()
+    public function connect()
     {
         $in = $this->request->data;     // En POST
-        $in = $this->request->query;    // En GET
 
         if (empty($in['email']) or empty($in['password'])) {
             $this->_notAuthenticated();
@@ -707,23 +666,43 @@ class ApiController extends AppController
             $this->_notAuthenticated();
             return;
         }
-        $token = $this->TokenGenerator->generate($user->id, "+6 days +0 hours");
-        $this->data['returns']['token'] = $token;
+        $this->data['returns']['user'] = json_encode($user);
         die(json_encode($this->data));
     }
 
-    private function _isTokenValid()
+    public function register()
     {
-        return true; // TODO : retourne toujours true, car on utilise pas le token finalement
         $in = $this->request->data;     // En POST
-        $in = $this->request->query;    // En GET
-        if (!empty($in['token'])) {
-            // Décode le token
-            if($this->TokenGenerator->read($in['token'])){
-                return true;
-            }
+
+        if (empty($in['firstname']) or empty($in['lastname']) or empty($in['email']) or empty($in['password']) or empty($in['password_confirm'])) {
+            $this->_errorRetourApi('/register/', "Veuillez remplir tous les champs");
+            return;
         }
-        return false;
+
+        $users_table = TableRegistry::get('users');
+        $user_exist = $users_table->find('all')
+            ->where(['email' => $in['email']])
+            ->first();
+        if (!empty($user_exist)) {
+            $this->_errorRetourApi('/register/', "Un utilisateur existe déjà avec cette adresse email. Veuillez rééssayer.");
+            return;
+        }
+
+        if ($in['password_confirm'] != $in['password']) {
+            $this->_errorRetourApi('/register/', "Veuillez saisir les mêmes mots de passe.");
+            return;
+        }
+        
+        $in['password'] = Security::hash($in['password'], 'sha1', true);
+
+        // Save user
+        $entity = $users_table->newEntity($in);
+        if (!$users_table->save($entity)) {
+            $this->_errorRetourApi('/register/', "Erreur lors de l'enregistrement.");
+            return;
+        }
+        $this->data['returns']['user'] = json_encode($entity);
+        die(json_encode($this->data));
     }
 
     private function _notAuthenticated()
