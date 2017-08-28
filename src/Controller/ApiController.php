@@ -33,7 +33,7 @@ class ApiController extends AppController
 
     public function beforeFilter(Event $event)
     {
-        header('Content-Type: application/json');
+        //header('Content-Type: application/json');
         $this->autoRender = false;
         $this->layoutAjax = true;
         $this->viewBuilder()->setLayout('json');
@@ -92,6 +92,91 @@ class ApiController extends AppController
             }
             $this->data['returns']['recipe'] = $this->getRecipeRandom();
             $this->data['returns']['series'] = $this->getSeriesRandom();
+        }
+        die(json_encode($this->data));
+    }
+
+    // Retourne la recette en fonction de l'ID/des ID de la/les recette en paramètre
+    public function recipe($recettes = null)
+    {
+        if (!$this->_isTokenValid()) {
+            $this->_notAuthenticated();
+            return;
+        }
+        $http = new Client();
+        if(empty($recettes)) {
+            $this->_errorParameter('recettes (id des recettes à afficher)');
+            return;
+        }else{
+            $recettes = explode(",", $recettes);
+            foreach ($recettes as $key => $recetteId){
+                $response = $http->post('http://food2fork.com/api/get', [
+                    'key' => self::API_KEY_FOOD,
+                    'rId' => $recetteId,
+                    'Accept' => 'application/json'
+                ]);
+                if(empty($response->json['recipe'])){
+                    $this->_errorRetourApi('https://cors-anywhere.herokuapp.com/http://food2fork.com/api/get', "Paramètres POST : key = ".self::API_KEY_FOOD . " | rID : ".$recetteId. " | Accept : application/json");
+                    return;
+                }
+                $this->data['returns']['recipe'][$key] = $response->json['recipe'];
+            }
+        }
+        die(json_encode($this->data));
+    }
+
+    // Retourne 4 recettes aléatoires
+    public function recipes($ingredients = null)
+    {
+        if (!$this->_isTokenValid()) {
+            $this->_notAuthenticated();
+            return;
+        }
+        if(empty($ingredients)) {
+            $this->_errorParameter('ingredient');
+            return;
+        }else{
+            $this->data['returns']['recipes'] = $this->getRecipeRandom($ingredients);
+        }
+        die(json_encode($this->data));
+    }
+
+    // Retourne
+    public function drinks($taste = null)
+    {
+        if (!$this->_isTokenValid()) {
+            $this->_notAuthenticated();
+            return;
+        }
+        if (is_null($taste)) {
+            $this->_errorParameter('taste (type de boisson : fraiche, épicée, ...)');
+            return;
+        } else {
+            $http = new Client();
+
+            $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
+            $responseAlcohol = $http->get($urlAlcohol);
+            if($responseAlcohol->json['totalResult'] == 0){
+                $this->_errorRetourApi($urlAlcohol);
+                return;
+            }
+            $nbAlcohol = count($responseAlcohol->json['result']) - 1;
+            $nAlcohol = rand(0, $nbAlcohol);
+
+            $this->data['returns']['drink_alcohol']['name'] = $responseAlcohol->json['result'][$nAlcohol]['name'];
+            $this->data['returns']['drink_alcohol']['url_video'] = $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
+
+            $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
+            $responseNotAlcohol = $http->get($urlNotAlcohol);
+            if($responseNotAlcohol->json['totalResult'] == 0){
+                $this->_errorRetourApi($urlNotAlcohol);
+                return;
+            }
+            $nbNotAlcohol = count($responseNotAlcohol->json['result']) - 1;
+            $nNotAlcohol = rand(0, $nbNotAlcohol);
+
+            $this->data['returns']['drink_not_alcohol']['name'] = $responseAlcohol->json['result'][$nNotAlcohol]['name'];
+            $this->data['returns']['drink_not_alcohol']['url_video'] = $responseAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
         }
         die(json_encode($this->data));
     }
@@ -258,10 +343,10 @@ class ApiController extends AppController
             return;
         }else{
             for($i=0; $i<4; $i++){
-                $data['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
-                $data['title'] = $responseFood->json['recipes'][$i]['title'];
-                $data['image'] = $responseFood->json['recipes'][$i]['image_url'];
-                $data['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
+                $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
+                $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
+                $data[$i]['image'] = $responseFood->json['recipes'][$i]['image_url'];
+                $data[$i]['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
             }
         }
         return $data;
@@ -555,71 +640,6 @@ class ApiController extends AppController
             $with_ice_cubes = "";
         }
         return array($date, $with_ice_cubes);
-    }
-
-    public function recipe($recettes)
-    {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
-        $data = array();
-        $http = new Client();
-        if(empty($recettes)) {
-            $this->_errorParameter('recettes (id des recettes à afficher)');
-            return;
-        }else{
-            foreach ($recettes as $recetteId){
-                $response = $http->post('http://food2fork.com/api/get', [
-                    'key' => self::API_KEY_FOOD,
-                    'rId' => $recetteId,
-                    'Accept' => 'application/json'
-                ]);
-                debug($response); exit();
-                if($response->json[''] == 0){
-                    $this->_errorRetourApi('https://cors-anywhere.herokuapp.com/http://food2fork.com/api/get', "Paramètres POST : key = ".self::API_KEY_FOOD . " | rID : ".$recetteId. " | Accept : application/json");
-                    return;
-                }
-            }
-        }
-        return $data;
-    }
-
-    public function drinks($taste = null)
-    {
-        if (!$this->_isTokenValid()) {
-            $this->_notAuthenticated();
-            return;
-        }
-        if (is_null($taste)) {
-            $this->_errorParameter('taste (type de boisson : fraiche, épicée, ...)');
-            return;
-        } else {
-            $http = new Client();
-
-            $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
-            $responseAlcohol = $http->get($urlAlcohol);
-            if($responseAlcohol->json['totalResult'] == 0){
-                $this->_errorRetourApi($urlAlcohol);
-                return;
-            }
-            $nbAlcohol = count($responseAlcohol->json['result']) - 1;
-            $nAlcohol = rand(0, $nbAlcohol);
-
-            $this->data['returns']['drink_alcohol'] = $responseAlcohol->json['result'][$nAlcohol];
-
-            $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "?apiKey=".self::API_KEY_DRINKS;
-            $responseNotAlcohol = $http->get($urlNotAlcohol);
-            if($responseNotAlcohol->json['totalResult'] == 0){
-                $this->_errorRetourApi($urlNotAlcohol);
-                return;
-            }
-            $nbNotAlcohol = count($responseNotAlcohol->json['result']) - 1;
-            $nNotAlcohol = rand(0, $nbNotAlcohol);
-
-            $this->data['returns']['drink_not_alcohol'] = $responseNotAlcohol->json['result'][$nNotAlcohol];
-        }
-        die(json_encode($this->data));
     }
 
 
