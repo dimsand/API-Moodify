@@ -117,6 +117,24 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
     }
     ```   
     
+- "Je veux voir une série" : ```[GET] /serie/?{token}```
+    -> Retourne une série aléatoire
+    
+    Exemple RETOUR http://api.moodify.dev/api/serie?token={token} :
+    ```bash
+    {  
+       "return_code":0,
+       "error":"",
+       "returns":{  
+          "series":{  
+             "title":"Van Loc : un grand flic de Marseille",
+             "description":"George N'Guyen Van Loc interpr\u00e8te son propre personnage, inspecteur puis commissaire de police \u00e0 Marseille, baptis\u00e9 \"Le Chinois\" par la mafia locale.",
+             "image":null
+          }
+       }
+    }
+    ```  
+    
 
 ## Installation
 
