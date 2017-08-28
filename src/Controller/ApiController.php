@@ -33,7 +33,7 @@ class ApiController extends AppController
 
     public function beforeFilter(Event $event)
     {
-        //header('Content-Type: application/json');
+        header('Content-Type: application/json');
         $this->autoRender = false;
         $this->layoutAjax = true;
         $this->viewBuilder()->setLayout('json');
@@ -141,7 +141,7 @@ class ApiController extends AppController
         die(json_encode($this->data));
     }
 
-    // Retourne
+    // Retourne 1 boisson alcoolisée et une boisson non alcoolisée aléatoire
     public function drinks($taste = null)
     {
         if (!$this->_isTokenValid()) {
@@ -177,6 +177,32 @@ class ApiController extends AppController
 
             $this->data['returns']['drink_not_alcohol']['name'] = $responseAlcohol->json['result'][$nNotAlcohol]['name'];
             $this->data['returns']['drink_not_alcohol']['url_video'] = $responseAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
+        }
+        die(json_encode($this->data));
+    }
+
+    public function serie()
+    {
+        if (!$this->_isTokenValid()) {
+            $this->_notAuthenticated();
+            return;
+        }
+        $http = new Client();
+        $url ="https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
+        $responseSerie = $http->get($url);
+        if(empty($responseSerie->json['shows'])){
+            $this->_errorRetourApi($url);
+            return;
+        }else{
+            $nbSeries = count($responseSerie->json['shows']);
+            $nSeries= rand(0, $nbSeries);
+            $this->data['returns']['series']['title'] = $responseSerie->json['shows'][$nSeries]['title'];
+            $this->data['returns']['series']['description'] = $responseSerie->json['shows'][$nSeries]['description'];
+            if(!empty($responseSerie->json['shows'][$nSeries]['images']['poster'])){
+                $this->data['returns']['series']['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
+            }else{
+                $this->data['returns']['series']['image'] = "http://via.placeholder.com/150x300?text=No image";
+            }
         }
         die(json_encode($this->data));
     }
@@ -345,7 +371,11 @@ class ApiController extends AppController
             for($i=0; $i<4; $i++){
                 $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
                 $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
-                $data[$i]['image'] = $responseFood->json['recipes'][$i]['image_url'];
+                if(!empty($responseFood->json['recipes'][$i]['image_url'])){
+                    $data['image'] = $responseFood->json['recipes'][$i]['image_url'];
+                }else{
+                    $data['image'] = "http://via.placeholder.com/150x300?text=No image";
+                }
                 $data[$i]['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
             }
         }
@@ -370,7 +400,11 @@ class ApiController extends AppController
             $nSeries= rand(0, $nbSeries);
             $data['title'] = $responseSerie->json['shows'][$nSeries]['title'];
             $data['description'] = $responseSerie->json['shows'][$nSeries]['description'];
-            $data['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
+            if(!empty($responseSerie->json['shows'][$nSeries]['images']['poster'])){
+                $data['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
+            }else{
+                $data['image'] = "http://via.placeholder.com/150x300?text=No image";
+            }
         }
         return $data;
     }
