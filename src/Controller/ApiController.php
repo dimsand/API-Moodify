@@ -680,6 +680,7 @@ class ApiController extends AppController
 
     private function _isTokenValid()
     {
+        return true; // TODO : retourne toujours true, car on utilise pas le token finalement
         $in = $this->request->data;     // En POST
         $in = $this->request->query;    // En GET
         if (!empty($in['token'])) {
