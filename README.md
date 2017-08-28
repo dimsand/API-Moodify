@@ -12,12 +12,111 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
     - La météo
     - 4 recettes au hasard
     - 1 série au hasard
-    - 1 boisson alcoolisé et 1 boisson non alcoolisé (en fonction de la météo)
+    - 1 boisson alcoolisée et 1 boisson non alcoolisée (en fonction de la météo)
     - 1 activité (en fonction de la météo)
     
-- Si la précédente requête ne fonctionne pas (à cause de l'API météo retournant une erreur), faire appel à une autre API météo [OpenWeatherMap](https://openweathermap.org/weather-conditions) : ```[GET] /home2/{ville}?{token}```
+    Exemple RETOUR http://api.moodify.dev/api/home/lyon?token={token} :
+    ```bash
+    {  
+       "return_code":0,
+       "error":"",
+       "returns":{  
+          "weather":{  
+             "ville":"lyon",
+             "condition":"Fortement nuageux",
+             "condition_key":"fortement-nuageux",
+             "tmp":23,
+             "humidity":57
+          },
+          "drink_alcohol":{  
+             "name":"Absolut Greyhound",
+             "url_video":"PvIwGPrfY0s"
+          },
+          "drink_not_alcohol":{  
+             "name":"Citrus Cream",
+             "url_video":"BltwKmZnukI"
+          },
+          "activity":[  
+             "Karting",
+             "Bowling"
+          ],
+          "recipe":{  
+             "recipe_id":"8608",
+             "title":"Christmas Fruitcake",
+             "image":"http:\/\/static.food2fork.com\/463105646.jpg",
+             "source_url":"http:\/\/allrecipes.com\/Recipe\/Christmas-Fruitcake\/Detail.aspx"
+          },
+          "series":{  
+             "title":"Ce soir tout est permis",
+             "description":"Ce soir, tout est permis sur les ondes de V T\u00e9l\u00e9 ! L'\u00e9mission de vari\u00e9t\u00e9, anim\u00e9e de main de ma\u00eetre par \u00c9ric Salvail, permet \u00e0 des artistes de s'\u00e9clater en relevant des d\u00e9fis loufoques impliquant l'improvisation, le mime, le lip sync et m\u00eame la danse et la contorsion ! Sous la direction de l'animateur, les invit\u00e9s sont amen\u00e9s \u00e0 se d\u00e9passer et \u00e0 faire rire le public pr\u00e9sent en studio et \u00e0 la maison.",
+             "image":"https:\/\/www.betaseries.com\/images\/fonds\/poster\/291294.jpg"
+          }
+       }
+    }
+    ```   
     
+- Si la précédente requête ne fonctionne pas (à cause de l'API météo retournant une erreur), faire appel à une autre API météo [OpenWeatherMap](https://openweathermap.org/weather-conditions) : ```[GET] /home2/{ville}?{token}```
 
+- "Je veux manger du {ingredient}" : ```[GET] /recipes/{ingredient}?{token}```
+    -> Retourne 4 recettes aléatoires avec l'ingrédient {ingredient}
+    
+    Exemple RETOUR http://api.moodify.dev/api/recipes/framboise?token={token} :
+    ```bash
+    {  
+       "return_code":0,
+       "error":"",
+       "returns":{  
+          "recipes":[  
+             {  
+                "recipe_id":"3f0484",
+                "title":"Lambic Sangra Recipe",
+                "image":"http:\/\/static.food2fork.com\/lambic_sangria_6008fe5.jpg",
+                "source_url":"http:\/\/www.chow.com\/recipes\/26241-lambic-sangria"
+             },
+             {  
+                "recipe_id":"e6a700",
+                "title":"White chocolate & raspberry cheesecake",
+                "image":"http:\/\/static.food2fork.com\/171622_MEDIUMe2fc.jpg",
+                "source_url":"http:\/\/www.bbcgoodfood.com\/recipes\/171622\/white-chocolate-and-raspberry-cheesecake"
+             },
+             {  
+                "recipe_id":"47835",
+                "title":"Broiled Stone Fruit with Sweet Cream",
+                "image":"http:\/\/static.food2fork.com\/broiledfruit3dae.jpg",
+                "source_url":"http:\/\/www.101cookbooks.com\/archives\/000178.html"
+             },
+             {  
+                "recipe_id":"53161",
+                "title":"Spring Berry Champagne Cocktail",
+                "image":"http:\/\/static.food2fork.com\/mare_spring_berry_champagne_cocktail_hc2d0.jpg",
+                "source_url":"http:\/\/www.bonappetit.com\/recipes\/2003\/04\/spring_berry_champagne_cocktail"
+             }
+          ]
+       }
+    }
+    ```
+    
+- "Je veux boire une boisson {type_boisson}" : ```[GET] /drinks/{type_boisson}?{token}```
+    -> Retourne 1 boisson alcoolisée et 1 boisson non alcoolisée aléatoires de type {type_boisson} (type_boisson = fraiche, épicée, ...)
+    
+    Exemple RETOUR http://api.moodify.dev/api/drinks/spicy?token={token} :
+    ```bash
+    {  
+       "return_code":0,
+       "error":"",
+       "returns":{  
+          "drink_alcohol":{  
+             "name":"Cino",
+             "url_video":"5NgPaDvspWc"
+          },
+          "drink_not_alcohol":{  
+             "name":"Brandy Crusta",
+             "url_video":"Qgpw1KREbcQ"
+          }
+       }
+    }
+    ```   
+    
 
 ## Installation
 
@@ -111,23 +210,6 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8;
 ```
 
-```bash
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `firstname` varchar(60) DEFAULT NULL,
-  `lastname` varchar(60) DEFAULT NULL,
-  `password` varchar(64) DEFAULT NULL,
-  `email` varchar(80) DEFAULT NULL,
-  `social_id` varchar(45) DEFAULT NULL,
-  `link` varchar(255) DEFAULT NULL,
-  `avatar` varchar(100) DEFAULT NULL,
-  `created` datetime DEFAULT NULL,
-  `updated` datetime DEFAULT NULL,
-  `token_id` varchar(32) DEFAULT NULL,
-  `token_expire` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8;
-```
 
 ## Crédits
 
