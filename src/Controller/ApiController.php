@@ -198,7 +198,7 @@ class ApiController extends AppController
             $nSeries= rand(0, $nbSeries);
             $this->data['returns']['series']['title'] = $responseSerie->json['shows'][$nSeries]['title'];
             $this->data['returns']['series']['description'] = $responseSerie->json['shows'][$nSeries]['description'];
-            if(!empty($responseSerie->json['shows'][$nSeries]['images']['poster'])){
+            if(!empty($responseSerie->json['shows'][$nSeries]['images']['poster']) && $responseSerie->json['shows'][$nSeries]['images']['poster'] != null){
                 $this->data['returns']['series']['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
             }else{
                 $this->data['returns']['series']['image'] = "http://via.placeholder.com/150x300?text=No image";
@@ -371,7 +371,7 @@ class ApiController extends AppController
             for($i=0; $i<4; $i++){
                 $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
                 $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
-                if(!empty($responseFood->json['recipes'][$i]['image_url'])){
+                if(!empty($responseFood->json['recipes'][$i]['image_url']) && $responseFood->json['recipes'][$i]['image_url'] != null){
                     $data['image'] = $responseFood->json['recipes'][$i]['image_url'];
                 }else{
                     $data['image'] = "http://via.placeholder.com/150x300?text=No image";
@@ -400,7 +400,7 @@ class ApiController extends AppController
             $nSeries= rand(0, $nbSeries);
             $data['title'] = $responseSerie->json['shows'][$nSeries]['title'];
             $data['description'] = $responseSerie->json['shows'][$nSeries]['description'];
-            if(!empty($responseSerie->json['shows'][$nSeries]['images']['poster'])){
+            if(!empty($responseSerie->json['shows'][$nSeries]['images']['poster']) && $responseSerie->json['shows'][$nSeries]['images']['poster'] != null){
                 $data['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
             }else{
                 $data['image'] = "http://via.placeholder.com/150x300?text=No image";
