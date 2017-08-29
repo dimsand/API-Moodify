@@ -69,25 +69,6 @@ class ApiController extends AppController
         die(json_encode($this->data));
     }
 
-    // Alternative de la weather
-    public function home2($ville = null)
-    {
-        if (is_null($ville)) {
-            $this->_errorParameter('ville');
-            return;
-        } else {
-            $this->data['returns']['weather'] = $this->getWeather2($ville);
-            if (!empty($this->data['returns']['weather'])) {
-                $this->data['returns']['drink_alcohol'] = $this->getAlcoholDrink2($this->data['returns']['weather']['condition_key']);
-                $this->data['returns']['drink_not_alcohol'] = $this->getNotAlcoholDrink2($this->data['returns']['weather']['condition_key']);
-                $this->data['returns']['activity'] = $this->getActivityByWeather2($this->data['returns']['weather']['condition_key']);
-            }
-            $this->data['returns']['recipe'] = $this->getRecipeRandom();
-            $this->data['returns']['series'] = $this->getSeriesRandom();
-        }
-        die(json_encode($this->data));
-    }
-
     // Retourne la recette en fonction de l'ID/des ID de la/les recette en paramètre
     public function recipe($recettes = null)
     {
@@ -114,7 +95,7 @@ class ApiController extends AppController
     }
 
     // Retourne 4 recettes aléatoires
-    public function recipes($ingredients = null)
+    public function food($ingredients = null)
     {
         if(empty($ingredients)) {
             $this->_errorParameter('ingredient');
@@ -183,6 +164,29 @@ class ApiController extends AppController
         die(json_encode($this->data));
     }
 
+    public function activity()
+    {
+        $activities_table = TableRegistry::get('activity');
+        $activities = $activities_table->find('all')
+            ->toArray();
+        if(empty($activities)){
+            $this->_errorRetourApi(null);
+            return;
+        }else{
+            $activity1 = rand(0, (count($activities)-1));
+            $this->data['returns']['activity'][0] = $activities[$activity1]->name;
+            $same_activity = true;
+            while($same_activity){
+                $activity2 = rand(0, (count($activities)-1));
+                if($activities[$activity1]->name != $activities[$activity2]->name){
+                    $same_activity = false;
+                }
+            }
+            $this->data['returns']['activity'][1] = $activities[$activity2]->name;
+        }
+        die(json_encode($this->data));
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     /// FONCTIONS TRAITEMENTS APIS EXTERNE
@@ -211,25 +215,6 @@ class ApiController extends AppController
         $data['condition_key'] = $getData->json['current_condition']['condition_key'];
         $data['tmp'] = $getData->json['current_condition']['tmp'];
         $data['humidity'] = $getData->json['current_condition']['humidity'];
-
-        return $data;
-    }
-
-    // Other weatherApi (marche mieux j'ai l'impression)
-    public function getWeather2($ville)
-    {
-        $data = array();
-        $http = new Client();
-        $getData = $http->get('http://api.openweathermap.org/data/2.5/weather?units=metric&lang=fr&q=' . $ville . '&appid=' . self::API_KEY_WEATHER);
-        if($getData->json['cod'] != 200){
-            $this->_errorRetourApi('http://api.openweathermap.org/data/2.5/weather?units=metric&lang=fr&q=' . $ville . '&appid=' . self::API_KEY_WEATHER, $getData->json['message']);
-            return;
-        }
-        $data['ville'] = $ville;
-        $data['condition'] = $getData->json['weather'][0]['description'];
-        $data['condition_key'] = $getData->json['weather'][0]['id'];
-        $data['temperature'] = $getData->json['main']['temp'];
-        $data['icon'] = $getData->json['weather'][0]['icon'];
 
         return $data;
     }
@@ -263,52 +248,6 @@ class ApiController extends AppController
         $http = new Client();
 
         $taste = $this->_getTasteByConditionWeather($condition_key);
-        list($period_date, $with_ice_cubes) = $this->_getPeriodDate();
-
-        $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=".self::API_KEY_DRINKS;
-        $responseNotAlcohol = $http->get($urlNotAlcohol);
-        if($responseNotAlcohol->json['totalResult'] == 0){
-            $this->_errorRetourApi($urlNotAlcohol);
-            return;
-        }
-        $nbNotAlcohol = count($responseNotAlcohol->json['result']) - 1;
-        $nNotAlcohol = rand(0, $nbNotAlcohol);
-
-        $data['name'] = $responseNotAlcohol->json['result'][$nNotAlcohol]['name'];
-        $data['url_video'] = $responseNotAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
-
-        return $data;
-    }
-
-    public function getAlcoholDrink2($condition_key = null)
-    {
-        $data = array();
-        $http = new Client();
-
-        $taste = $this->_getTasteByConditionWeather2($condition_key);
-        list($period_date, $with_ice_cubes) = $this->_getPeriodDate();
-
-        $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=".self::API_KEY_DRINKS;
-        $responseAlcohol = $http->get($urlAlcohol);
-        if($responseAlcohol->json['totalResult'] == 0){
-            $this->_errorRetourApi($urlAlcohol);
-            return;
-        }
-        $nbAlcohol = count($responseAlcohol->json['result']) - 1;
-        $nAlcohol = rand(0, $nbAlcohol);
-
-        $data['name'] = $responseAlcohol->json['result'][$nAlcohol]['name'];
-        $data['url_video'] = $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
-
-        return $data;
-    }
-
-    public function getNotAlcoholDrink2($condition_key = null)
-    {
-        $data = array();
-        $http = new Client();
-
-        $taste = $this->_getTasteByConditionWeather2($condition_key);
         list($period_date, $with_ice_cubes) = $this->_getPeriodDate();
 
         $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=".self::API_KEY_DRINKS;
@@ -384,37 +323,6 @@ class ApiController extends AppController
             return;
         }else{
             $weather = $this->_getWeatherByConditionWeather($weather_condition_key);
-            $data = array();
-            $activities_table = TableRegistry::get('activity');
-            $activities = $activities_table->find('all')
-                ->where(['weather' => $weather])
-                ->toArray();
-            if(empty($activities)){
-                $this->_errorRetourApi(null);
-                return;
-            }else{
-                $activity1 = rand(0, (count($activities)-1));
-                array_push($data, $activities[$activity1]->name);
-                $same_activity = true;
-                while($same_activity){
-                    $activity2 = rand(0, (count($activities)-1));
-                    if($activities[$activity1]->name != $activities[$activity2]->name){
-                        $same_activity = false;
-                    }
-                }
-                array_push($data, $activities[$activity2]->name);
-            }
-        }
-        return $data;
-    }
-
-    public function getActivityByWeather2($weather_condition_key)
-    {
-        if (is_null($weather_condition_key)) {
-            $this->_errorParameter('weather_condition_key (Snow, Rainy)');
-            return;
-        }else{
-            $weather = $this->_getWeatherByConditionWeather2($weather_condition_key);
             $data = array();
             $activities_table = TableRegistry::get('activity');
             $activities = $activities_table->find('all')
@@ -555,54 +463,6 @@ class ApiController extends AppController
                 break;
         }
         return $weather;
-    }
-
-    private function _getTasteByConditionWeather2($condition_key)
-    {
-        $taste = null;
-        if(($condition_key >= 200 && $condition_key <= 232) || ($condition_key >= 300 && $condition_key <= 321)){
-            $taste = "spicy";
-        }else if(($condition_key == 800)){
-            $taste = "fresh";
-        }else if(($condition_key >= 300 && $condition_key <= 321)){
-            $taste = "herb";
-        }else if(($condition_key >= 500 && $condition_key <= 531)){
-            $taste = "berry";
-        }else if(($condition_key >= 600 && $condition_key <= 622)){
-            $taste = "sour";
-        }else if(($condition_key >= 701 && $condition_key <= 781)){
-            $taste = "bitter";
-        }else if(($condition_key >= 801 && $condition_key <= 804)){
-            $taste = "fruity";
-        }else{
-            $taste = "sweet";
-        }
-
-        return $taste;
-    }
-
-    private function _getWeatherByConditionWeather2($condition_key)
-    {
-        $taste = null;
-        if(($condition_key >= 200 && $condition_key <= 232) || ($condition_key >= 300 && $condition_key <= 321)){
-            $taste = "Rainy";
-        }else if(($condition_key == 800)){
-            $taste = "Sunny";
-        }else if(($condition_key >= 300 && $condition_key <= 321)){
-            $taste = "Rainy";
-        }else if(($condition_key >= 500 && $condition_key <= 531)){
-            $taste = "Rainy";
-        }else if(($condition_key >= 600 && $condition_key <= 622)){
-            $taste = "Snow";
-        }else if(($condition_key >= 701 && $condition_key <= 781)){
-            $taste = "Windy";
-        }else if(($condition_key >= 801 && $condition_key <= 804)){
-            $taste = "Windy";
-        }else{
-            $taste = "sweet";
-        }
-
-        return $taste;
     }
 
     private function _getPeriodDate()
