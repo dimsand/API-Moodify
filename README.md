@@ -4,8 +4,11 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
 
 ## Utilisation
 
-- Authentification : ```[GET] /api/getToken?email={emailUser}&password={passwordUser}```
-    -> Retourne un token (à mettre dans les requetes ci-dessous)
+- Connexion : ```[POST] /api/connect?email={emailUser}&password={passwordUser}```
+    -> Retourne 0 en ```return_code``` avec les infos de user dans l'objet ```returns.user``` si l'utilisateur a été trouvé. Sinon, renvoi une erreur.
+
+- Inscription : ```[POST] /api/register?firstname={firstname}&lastname={lastname}&email={emailUser}&password={passwordUser}&password_confirm={password_confirm}```
+    -> Retourne 0 en ```return_code``` avec les infos de user dans l'objet ```returns.user``` si l'utilisateur a été créé. Sinon, renvoi une erreur.
 
 - Page d'accueil : ```[GET] /home/{ville}?{token}```
     -> Retourne :
@@ -15,7 +18,7 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
     - 1 boisson alcoolisée et 1 boisson non alcoolisée (en fonction de la météo)
     - 1 activité (en fonction de la météo)
     
-    Exemple RETOUR http://api.moodify.dev/api/home/lyon?token={token} :
+    Exemple RETOUR http://api.moodify.dev/api/home/lyon :
     ```bash
     {  
        "return_code":0,
@@ -57,10 +60,10 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
     
 - Si la précédente requête ne fonctionne pas (à cause de l'API météo retournant une erreur), faire appel à une autre API météo [OpenWeatherMap](https://openweathermap.org/weather-conditions) : ```[GET] /home2/{ville}?{token}```
 
-- "Je veux manger du {ingredient}" : ```[GET] /recipes/{ingredient}?{token}```
+- "Je veux manger du {ingredient}" : ```[GET] /recipes/{ingredient}```
     -> Retourne 4 recettes aléatoires avec l'ingrédient {ingredient}
     
-    Exemple RETOUR http://api.moodify.dev/api/recipes/framboise?token={token} :
+    Exemple RETOUR http://api.moodify.dev/api/recipes/framboise :
     ```bash
     {  
        "return_code":0,
@@ -96,10 +99,10 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
     }
     ```
     
-- "Je veux boire une boisson {type_boisson}" : ```[GET] /drinks/{type_boisson}?{token}```
+- "Je veux boire une boisson {type_boisson}" : ```[GET] /drinks/{type_boisson}```
     -> Retourne 1 boisson alcoolisée et 1 boisson non alcoolisée aléatoires de type {type_boisson} (type_boisson = fraiche, épicée, ...)
     
-    Exemple RETOUR http://api.moodify.dev/api/drinks/spicy?token={token} :
+    Exemple RETOUR http://api.moodify.dev/api/drinks/spicy} :
     ```bash
     {  
        "return_code":0,
@@ -117,10 +120,10 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
     }
     ```   
     
-- "Je veux voir une série" : ```[GET] /serie/?{token}```
+- "Je veux voir une série" : ```[GET] /serie/```
     -> Retourne une série aléatoire
     
-    Exemple RETOUR http://api.moodify.dev/api/serie?token={token} :
+    Exemple RETOUR http://api.moodify.dev/api/serie} :
     ```bash
     {  
        "return_code":0,
@@ -131,6 +134,44 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
              "description":"George N'Guyen Van Loc interpr\u00e8te son propre personnage, inspecteur puis commissaire de police \u00e0 Marseille, baptis\u00e9 \"Le Chinois\" par la mafia locale.",
              "image":null
           }
+       }
+    }
+    ```  
+    
+- "Je veux boire une boisson {type_boisson}" : ```[GET] /drinks/{type_boisson}```
+    -> Retourne 1 boisson alcoolisée et 1 boisson non alcoolisée aléatoires de type {type_boisson} (type_boisson = fraiche, épicée, ...)
+    
+    Exemple RETOUR http://api.moodify.dev/api/drinks/spicy} :
+    ```bash
+    {  
+       "return_code":0,
+       "error":"",
+       "returns":{  
+          "drink_alcohol":{  
+             "name":"Cino",
+             "url_video":"5NgPaDvspWc"
+          },
+          "drink_not_alcohol":{  
+             "name":"Brandy Crusta",
+             "url_video":"Qgpw1KREbcQ"
+          }
+       }
+    }
+    ```   
+    
+- "Je veux faire une activité " : ```[GET] /activity/```
+    -> Retourne 2 activités aléatoires
+    
+    Exemple RETOUR http://api.moodify.dev/api/activity :
+    ```bash
+    {  
+       "return_code":0,
+       "error":"",
+       "returns":{  
+          "activity":[  
+             "Lire",
+             "Soir\u00e9e entre amis \u00e0 la maison"
+          ]
        }
     }
     ```  
