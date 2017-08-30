@@ -249,8 +249,9 @@ class ApiController extends AppController
         $nAlcohol = rand(0, $nbAlcohol);
 
         $data['name'] = $responseAlcohol->json['result'][$nAlcohol]['name'];
-        $data['url_video'] = "https://www.youtube.com/embed/" . $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
-
+        if(!empty($responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'])){
+            $data['url_video'] = "https://www.youtube.com/embed/" . $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
+        }    
         return $data;
     }
 
@@ -510,6 +511,7 @@ function _getPeriodDate()
 {
     date_default_timezone_set('Europe/Paris');
     $date_hour = date('G');
+    $date = "afternoon";
     if ($date_hour >= 28) {
         if ($date_hour >= 05 && $date_hour <= 17) {
             $date = "afternoon";
