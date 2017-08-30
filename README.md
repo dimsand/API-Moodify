@@ -10,6 +10,10 @@ API renvoyant les données nécessaires à l'utilisation de l'application [Moodi
 - Inscription : ```[POST] /api/register?firstname={firstname}&lastname={lastname}&email={emailUser}&password={passwordUser}&password_confirm={password_confirm}```
     -> Retourne 0 en ```return_code``` avec les infos de user dans l'objet ```returns.user``` si l'utilisateur a été créé. Sinon, renvoi une erreur.
 
+- Connexion via Google Auth : ```[POST] /api/registerGoogle?id_token={id_token}```
+    -> Vérifie si le compte google existe avec l'id token google envoyé. Si oui, on l'inscrit et on le connecte si il n'existe pas encore dans notre base, ou on le connecte juste si il existe déjà dans notre base.
+    -> Retourne 0 en ```return_code``` avec les infos de user dans l'objet ```returns.user``` si l'utilisateur a été créé. Sinon, renvoi une erreur.
+
 - Page d'accueil : ```[GET] /home/{ville}?{token}```
     -> Retourne :
     - La météo
