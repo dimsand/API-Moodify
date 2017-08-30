@@ -98,14 +98,10 @@ class ApiController extends AppController
     }
 
     // Retourne 4 recettes aléatoires
-    public function food($ingredients = null)
+    public function food()
     {
-        if (empty($ingredients)) {
-            $this->_errorParameter('ingredient');
-            return;
-        } else {
-            $this->data['returns']['recipes'] = $this->getRecipeRandom($ingredients);
-        }
+        $recipes = $this->getRecipeRandom();
+        $this->data['returns']['recipes'] = $recipes;
         die(json_encode($this->data));
     }
 
@@ -187,7 +183,14 @@ class ApiController extends AppController
                     $same_activity = false;
                 }
             }
-            $this->data['returns']['activities'][1] = $activities[$activity2]->name;
+            $same_activity = true;
+            while ($same_activity) {
+                $activity3 = rand(0, (count($activities) - 1));
+                if ($activities[$activity3]->name != $activities[$activity1]->name && $activities[$activity3]->name != $activities[$activity2]->name) {
+                    $same_activity = false;
+                }
+            }
+            $this->data['returns']['activities'][2] = $activities[$activity3]->name;
         }
         die(json_encode($this->data));
     }
@@ -246,7 +249,7 @@ class ApiController extends AppController
         $nAlcohol = rand(0, $nbAlcohol);
 
         $data['name'] = $responseAlcohol->json['result'][$nAlcohol]['name'];
-        $data['url_video'] = "https://www.youtube.com/embed/".$responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
+        $data['url_video'] = "https://www.youtube.com/embed/" . $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
 
         return $data;
     }
@@ -273,7 +276,7 @@ class ApiController extends AppController
         $nNotAlcohol = rand(0, $nbNotAlcohol);
 
         $data['name'] = $responseNotAlcohol->json['result'][$nNotAlcohol]['name'];
-        $data['url_video'] = "https://www.youtube.com/embed/".$responseNotAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
+        $data['url_video'] = "https://www.youtube.com/embed/" . $responseNotAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
 
         return $data;
     }
@@ -282,373 +285,393 @@ class ApiController extends AppController
      * @param string $ingredient
      * @return array|void de 4 recettes avec l'ingrédient envoyé en paramètre
      */
-    public function getRecipeRandom($ingredient = 'citron')
+    public function getRecipeRandom()
     {
-        if (is_null($ingredient)) {
-            $this->_errorParameter('ingredient');
-            return;
-        }
         $data = array();
         $http = new Client();
-        $url = "http://food2fork.com/api/search?key=" . self::API_KEY_FOOD . "&Accept=application/json&q=" . $ingredient;
+        $url = "http://food2fork.com/api/search?key=" . self::API_KEY_FOOD . "&Accept=application/json";
         $responseFood = $http->get($url);
         if ($responseFood->json['count'] == 0) {
             $this->_errorRetourApi($url);
             return;
         } else {
-            for ($i = 0; $i < 3; $i++) {
+            $nb_aleatoire = rand(0, 26);
+            for ($i = $nb_aleatoire; $i < ($nb_aleatoire + 3); $i++) {
                 $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
                 $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
+                $data[$i]['social_rank'] = $responseFood->json['recipes'][$i]['social_rank'];
                 if (!empty($responseFood->json['recipes'][$i]['image_url']) && $responseFood->json['recipes'][$i]['image_url'] != null) {
                     $data[$i]['image'] = $responseFood->json['recipes'][$i]['image_url'];
                 } else {
                     $data[$i]['image'] = "http://via.placeholder.com/150x300?text=No image";
                 }
                 $data[$i]['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
+                $data[$i]['difficulty'] = (int)($responseFood->json['recipes'][$i]['social_rank'] / (9+lcg_value()*(abs(11-9))));
+                $data[$i]['duration_preparation'] = rand(15, 60);
+                $data[$i]['cost'] = $responseFood->json['recipes'][$i]['social_rank'] / (9+lcg_value()*(abs(13-9)));
             }
         }
         return $data;
     }
 
-    /**
-     * @return array|void d'une série aléatoire
-     */
-    public function getSeriesRandom()
-    {
+/**
+ * @return array|void d'une série aléatoire
+ */
+public
+function getSeriesRandom()
+{
+    $data = array();
+    $http = new Client();
+    $url = "https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
+    $responseSerie = $http->get($url);
+    if (empty($responseSerie->json['shows'])) {
+        $this->_errorRetourApi($url);
+        return;
+    } else {
+        $nbSeries = count($responseSerie->json['shows']);
+        $nSeries = rand(0, $nbSeries);
+        $data['title'] = $responseSerie->json['shows'][$nSeries]['title'];
+        $data['description'] = $responseSerie->json['shows'][$nSeries]['description'];
+        if (!empty($responseSerie->json['shows'][$nSeries]['images']['poster']) && $responseSerie->json['shows'][$nSeries]['images']['poster'] != null) {
+            $data['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
+        } else {
+            $data['image'] = "http://via.placeholder.com/150x300?text=No image";
+        }
+    }
+    return $data;
+}
+
+/**
+ * @param $weather_condition_key
+ * @return array|void de 2 activités en fonction de la météo
+ */
+public
+function getActivityByWeather($weather_condition_key)
+{
+    if (is_null($weather_condition_key)) {
+        $this->_errorParameter('weather_condition_key (Snow, Rainy)');
+        return;
+    } else {
+        $weather = $this->_getWeatherByConditionWeather($weather_condition_key);
         $data = array();
-        $http = new Client();
-        $url = "https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
-        $responseSerie = $http->get($url);
-        if (empty($responseSerie->json['shows'])) {
-            $this->_errorRetourApi($url);
+        $activities_table = TableRegistry::get('activity');
+        $activities = $activities_table->find('all')
+            ->where(['weather' => $weather])
+            ->toArray();
+        if (empty($activities)) {
+            $this->_errorRetourApi(null);
             return;
         } else {
-            $nbSeries = count($responseSerie->json['shows']);
-            $nSeries = rand(0, $nbSeries);
-            $data['title'] = $responseSerie->json['shows'][$nSeries]['title'];
-            $data['description'] = $responseSerie->json['shows'][$nSeries]['description'];
-            if (!empty($responseSerie->json['shows'][$nSeries]['images']['poster']) && $responseSerie->json['shows'][$nSeries]['images']['poster'] != null) {
-                $data['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
-            } else {
-                $data['image'] = "http://via.placeholder.com/150x300?text=No image";
-            }
-        }
-        return $data;
-    }
-
-    /**
-     * @param $weather_condition_key
-     * @return array|void de 2 activités en fonction de la météo
-     */
-    public function getActivityByWeather($weather_condition_key)
-    {
-        if (is_null($weather_condition_key)) {
-            $this->_errorParameter('weather_condition_key (Snow, Rainy)');
-            return;
-        } else {
-            $weather = $this->_getWeatherByConditionWeather($weather_condition_key);
-            $data = array();
-            $activities_table = TableRegistry::get('activity');
-            $activities = $activities_table->find('all')
-                ->where(['weather' => $weather])
-                ->toArray();
-            if (empty($activities)) {
-                $this->_errorRetourApi(null);
-                return;
-            } else {
-                $activity1 = rand(0, (count($activities) - 1));
-                array_push($data, $activities[$activity1]->name);
-                $same_activity = true;
-                while ($same_activity) {
-                    $activity2 = rand(0, (count($activities) - 1));
-                    if ($activities[$activity1]->name != $activities[$activity2]->name) {
-                        $same_activity = false;
-                    }
+            $activity1 = rand(0, (count($activities) - 1));
+            array_push($data, $activities[$activity1]->name);
+            $same_activity = true;
+            while ($same_activity) {
+                $activity2 = rand(0, (count($activities) - 1));
+                if ($activities[$activity1]->name != $activities[$activity2]->name) {
+                    $same_activity = false;
                 }
-                array_push($data, $activities[$activity2]->name);
             }
-        }
-        return $data;
-    }
-
-    private function _getTasteByConditionWeather($condition_key)
-    {
-        $taste = null;
-        switch ($condition_key) {
-            case "nuit-nuageuse":
-            case "brouillard":
-            case "nuit-avec-developpement-nuageux":
-            case "fortement-nuageux":
-                $taste = "bitter";
-                break;
-            case "stratus":
-            case "ciel-voile":
-            case "nuit-avec-averses-de-neige-faible":
-            case "developpement-nuageux":
-                $taste = "sour";
-                break;
-            case "nuit-faiblement-orageuse":
-            case "eclaircies":
-            case "ensoleille":
-                $taste = "fresh";
-                break;
-            case "orage-modere":
-            case "fortement-orageux":
-            case "nuit-faiblement-orageuse":
-                $taste = "spicy";
-                break;
-            case "nuit-avec-averses-de-neige-faible":
-            case "averses-de-pluie-faible":
-            case "nuit-claire-et-stratus":
-            case "nuit-legerement-voilee":
-            case "nuit-claire":
-                $taste = "berry";
-                break;
-            case "faiblement-orageux":
-            case "couvert-avec-averses":
-            case "stratus-se-dissipant":
-                $taste = "herb";
-                break;
-            case "neige-forte":
-            case "pluie-forte":
-            case "nuit-avec-averses":
-            case "pluie-moderee":
-                $taste = "spicy";
-                break;
-            case "averses-de-pluie-forte":
-            case "pluie-et-neige-melee-moderee":
-            case "pluie-et-neige-melee-faible":
-            case "pluie-et-neige-melee-forte":
-            case "averses-de-pluie-moderee":
-                $taste = "fruity";
-                break;
-            case "averses-de-neige-faible":
-            case "neige-moderee":
-            case "neige-faible":
-            case "pluie-faible":
-            case "nuit-bien-degagee":
-            case "faibles-passages-nuageux":
-            case "faiblement-nuageux":
-                $taste = "sweet";
-                break;
-        }
-        return $taste;
-    }
-
-    private function _getWeatherByConditionWeather($condition_key)
-    {
-        $weather = null;
-        switch ($condition_key) {
-            case "eclaircies":
-            case "ensoleille":
-            case "nuit-claire-et-stratus":
-            case "nuit-legerement-voilee":
-            case "nuit-claire":
-            case "stratus-se-dissipant":
-            case "nuit-bien-degagee":
-                $weather = "Sunny";
-                break;
-            case "nuit-nuageuse":
-            case "brouillard":
-            case "nuit-avec-developpement-nuageux":
-            case "fortement-nuageux":
-            case "stratus":
-            case "ciel-voile":
-            case "developpement-nuageux":
-            case "faiblement-orageux":
-            case "faibles-passages-nuageux":
-            case "faiblement-nuageux":
-                $weather = "Windy";
-                break;
-            case "pluie-faible":
-            case "averses-de-pluie-faible":
-            case "pluie-forte":
-            case "nuit-avec-averses":
-            case "pluie-moderee":
-            case "averses-de-pluie-forte":
-            case "averses-de-pluie-moderee":
-            case "couvert-avec-averses":
-            case "nuit-faiblement-orageuse":
-            case "orage-modere":
-            case "fortement-orageux":
-            case "nuit-faiblement-orageuse":
-                $weather = "Rainy";
-                break;
-            case "averses-de-neige-faible":
-            case "nuit-avec-averses-de-neige-faible":
-            case "neige-moderee":
-            case "neige-faible":
-            case "pluie-et-neige-melee-moderee":
-            case "pluie-et-neige-melee-faible":
-            case "pluie-et-neige-melee-forte":
-            case "neige-forte":
-            case "nuit-avec-averses-de-neige-faible":
-                $weather = "Snow";
-                break;
-        }
-        return $weather;
-    }
-
-    private function _getPeriodDate()
-    {
-        date_default_timezone_set('Europe/Paris');
-        $date_hour = date('G');
-        if ($date_hour >= 28) {
-            if ($date_hour >= 05 && $date_hour <= 17) {
-                $date = "afternoon";
-            } else if ($date_hour >= 17 && $date_hour <= 19) {
-                $date = "pre-dinner";
-            } else if ($date_hour >= 19 && $date_hour <= 21) {
-                $date = "after-dinner";
-            } else if ($date_hour >= 21 && $date_hour <= 05) {
-                $date = "evening";
+            array_push($data, $activities[$activity2]->name);
+            $same_activity = true;
+            while ($same_activity) {
+                $activity3 = rand(0, (count($activities) - 1));
+                if ($activities[$activity3]->name != $activities[$activity1]->name && $activities[$activity3]->name != $activities[$activity2]->name) {
+                    $same_activity = false;
+                }
             }
-            $with_ice_cubes = "/with/ice-cubes";
+            array_push($data, $activities[$activity3]->name);
+        }
+    }
+    return $data;
+}
+
+private
+function _getTasteByConditionWeather($condition_key)
+{
+    $taste = null;
+    switch ($condition_key) {
+        case "nuit-nuageuse":
+        case "brouillard":
+        case "nuit-avec-developpement-nuageux":
+        case "fortement-nuageux":
+            $taste = "bitter";
+            break;
+        case "stratus":
+        case "ciel-voile":
+        case "nuit-avec-averses-de-neige-faible":
+        case "developpement-nuageux":
+            $taste = "sour";
+            break;
+        case "nuit-faiblement-orageuse":
+        case "eclaircies":
+        case "ensoleille":
+            $taste = "fresh";
+            break;
+        case "orage-modere":
+        case "fortement-orageux":
+        case "nuit-faiblement-orageuse":
+            $taste = "spicy";
+            break;
+        case "nuit-avec-averses-de-neige-faible":
+        case "averses-de-pluie-faible":
+        case "nuit-claire-et-stratus":
+        case "nuit-legerement-voilee":
+        case "nuit-claire":
+            $taste = "berry";
+            break;
+        case "faiblement-orageux":
+        case "couvert-avec-averses":
+        case "stratus-se-dissipant":
+            $taste = "herb";
+            break;
+        case "neige-forte":
+        case "pluie-forte":
+        case "nuit-avec-averses":
+        case "pluie-moderee":
+            $taste = "spicy";
+            break;
+        case "averses-de-pluie-forte":
+        case "pluie-et-neige-melee-moderee":
+        case "pluie-et-neige-melee-faible":
+        case "pluie-et-neige-melee-forte":
+        case "averses-de-pluie-moderee":
+            $taste = "fruity";
+            break;
+        case "averses-de-neige-faible":
+        case "neige-moderee":
+        case "neige-faible":
+        case "pluie-faible":
+        case "nuit-bien-degagee":
+        case "faibles-passages-nuageux":
+        case "faiblement-nuageux":
+            $taste = "sweet";
+            break;
+    }
+    return $taste;
+}
+
+private
+function _getWeatherByConditionWeather($condition_key)
+{
+    $weather = null;
+    switch ($condition_key) {
+        case "eclaircies":
+        case "ensoleille":
+        case "nuit-claire-et-stratus":
+        case "nuit-legerement-voilee":
+        case "nuit-claire":
+        case "stratus-se-dissipant":
+        case "nuit-bien-degagee":
+            $weather = "Sunny";
+            break;
+        case "nuit-nuageuse":
+        case "brouillard":
+        case "nuit-avec-developpement-nuageux":
+        case "fortement-nuageux":
+        case "stratus":
+        case "ciel-voile":
+        case "developpement-nuageux":
+        case "faiblement-orageux":
+        case "faibles-passages-nuageux":
+        case "faiblement-nuageux":
+            $weather = "Windy";
+            break;
+        case "pluie-faible":
+        case "averses-de-pluie-faible":
+        case "pluie-forte":
+        case "nuit-avec-averses":
+        case "pluie-moderee":
+        case "averses-de-pluie-forte":
+        case "averses-de-pluie-moderee":
+        case "couvert-avec-averses":
+        case "nuit-faiblement-orageuse":
+        case "orage-modere":
+        case "fortement-orageux":
+        case "nuit-faiblement-orageuse":
+            $weather = "Rainy";
+            break;
+        case "averses-de-neige-faible":
+        case "nuit-avec-averses-de-neige-faible":
+        case "neige-moderee":
+        case "neige-faible":
+        case "pluie-et-neige-melee-moderee":
+        case "pluie-et-neige-melee-faible":
+        case "pluie-et-neige-melee-forte":
+        case "neige-forte":
+        case "nuit-avec-averses-de-neige-faible":
+            $weather = "Snow";
+            break;
+    }
+    return $weather;
+}
+
+private
+function _getPeriodDate()
+{
+    date_default_timezone_set('Europe/Paris');
+    $date_hour = date('G');
+    if ($date_hour >= 28) {
+        if ($date_hour >= 05 && $date_hour <= 17) {
+            $date = "afternoon";
+        } else if ($date_hour >= 17 && $date_hour <= 19) {
+            $date = "pre-dinner";
+        } else if ($date_hour >= 19 && $date_hour <= 21) {
+            $date = "after-dinner";
+        } else if ($date_hour >= 21 && $date_hour <= 05) {
+            $date = "evening";
+        }
+        $with_ice_cubes = "/with/ice-cubes";
+    } else {
+
+        if ($date_hour >= 05 && $date_hour <= 17) {
+            $date = "afternoon";
+        } else if ($date_hour >= 17 && $date_hour <= 19) {
+            $date = "pre-dinner";
+        } else if ($date_hour >= 19 && $date_hour <= 21) {
+            $date = "after-dinner";
+        } else if ($date_hour >= 21 && $date_hour <= 05) {
+            $date = "evening";
+        }
+        $with_ice_cubes = "";
+    }
+    return array($date, $with_ice_cubes);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// FONCTIONS TRAITEMENT INTERNE API
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Connexion utilisateur
+public
+function connect()
+{
+    $in = $this->request->data;     // En POST
+
+    if (empty($in['email']) or empty($in['password'])) {
+        $this->_notAuthenticated();
+        return;
+    }
+
+    $email = $in['email'];
+    $password = Security::hash($in['password'], 'sha1', true);
+
+    // Vérif du user/mot de passe
+    $users_table = TableRegistry::get('users');
+    $user = $users_table->find('all')
+        ->where(['email' => $email, 'password' => $password])
+        ->first();
+
+    if (empty($user)) {
+        $this->_notAuthenticated();
+        return;
+    }
+    $this->data['returns']['user'] = json_encode($user);
+    die(json_encode($this->data));
+}
+
+// Création utilisateur
+public
+function register()
+{
+    $in = $this->request->data;     // En POST
+
+    if (empty($in['firstname']) or empty($in['lastname']) or empty($in['email']) or empty($in['password']) or empty($in['password_confirm'])) {
+        $this->_errorRetourApi('/register/', "Veuillez remplir tous les champs");
+        return;
+    }
+
+    $users_table = TableRegistry::get('users');
+    $user_exist = $users_table->find('all')
+        ->where(['email' => $in['email']])
+        ->first();
+    if (!empty($user_exist)) {
+        $this->_errorRetourApi('/register/', "Un utilisateur existe déjà avec cette adresse email. Veuillez rééssayer.");
+        return;
+    }
+
+    if ($in['password_confirm'] != $in['password']) {
+        $this->_errorRetourApi('/register/', "Veuillez saisir les mêmes mots de passe.");
+        return;
+    }
+
+    $in['password'] = Security::hash($in['password'], 'sha1', true);
+
+    // Save user
+    $entity = $users_table->newEntity($in);
+    if (!$users_table->save($entity)) {
+        $this->_errorRetourApi('/register/', "Erreur lors de l'enregistrement.");
+        return;
+    }
+    $this->data['returns']['user'] = json_encode($entity);
+    die(json_encode($this->data));
+}
+
+// Création / connexion utilisateur google
+public
+function registerGoogle()
+{
+    $in = $this->request->data;     // En POST
+
+    $client = new Google_Client(['client_id' => self::GOOGLE_OAUTH_CLIENT_ID]);
+    $payload = $client->verifyIdToken($in['id_token']);
+
+    $data = array();
+    $data['email'] = $payload['email'];
+    $data['firstname'] = $payload['given_name'];
+    $data['lastname'] = $payload['family_name'];
+    $data['avatar'] = $payload['picture'];
+    $data['social_id'] = self::SOCIAL_ID_GOOGLE;
+    $users_table = TableRegistry::get('users');
+
+    $user_exist = $users_table->find('all')
+        ->where(array('email' => $payload['email'], 'social_id' => self::SOCIAL_ID_GOOGLE))
+        ->first();
+
+    // Si l'utilisateur google est déjà enregistré, on renvoi les infos de l'user, sinon on le crée en base
+    if (!empty($user_exist)) {
+        $this->data['returns']['user'] = json_encode($user_exist);
+    } else {
+        $entity = $users_table->newEntity($data);
+        $save_user = $users_table->save($entity);
+        if ($save_user) {
+            $this->data['returns']['user'] = json_encode($entity);
         } else {
-
-            if ($date_hour >= 05 && $date_hour <= 17) {
-                $date = "afternoon";
-            } else if ($date_hour >= 17 && $date_hour <= 19) {
-                $date = "pre-dinner";
-            } else if ($date_hour >= 19 && $date_hour <= 21) {
-                $date = "after-dinner";
-            } else if ($date_hour >= 21 && $date_hour <= 05) {
-                $date = "evening";
-            }
-            $with_ice_cubes = "";
-        }
-        return array($date, $with_ice_cubes);
-    }
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///
-    /// FONCTIONS TRAITEMENT INTERNE API
-    ///
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Connexion utilisateur
-    public function connect()
-    {
-        $in = $this->request->data;     // En POST
-
-        if (empty($in['email']) or empty($in['password'])) {
-            $this->_notAuthenticated();
+            $this->_errorRetourApi('/registerGoogle/', "Erreur d'ajout de l'utilisateur.");
             return;
         }
-
-        $email = $in['email'];
-        $password = Security::hash($in['password'], 'sha1', true);
-
-        // Vérif du user/mot de passe
-        $users_table = TableRegistry::get('users');
-        $user = $users_table->find('all')
-            ->where(['email' => $email, 'password' => $password])
-            ->first();
-
-        if (empty($user)) {
-            $this->_notAuthenticated();
-            return;
-        }
-        $this->data['returns']['user'] = json_encode($user);
-        die(json_encode($this->data));
     }
 
-    // Création utilisateur
-    public function register()
-    {
-        $in = $this->request->data;     // En POST
+    die(json_encode($this->data));
+}
 
-        if (empty($in['firstname']) or empty($in['lastname']) or empty($in['email']) or empty($in['password']) or empty($in['password_confirm'])) {
-            $this->_errorRetourApi('/register/', "Veuillez remplir tous les champs");
-            return;
-        }
+// ----------------------------------------------------------------------------------------------------------------
+// RETOURS ERREURS
 
-        $users_table = TableRegistry::get('users');
-        $user_exist = $users_table->find('all')
-            ->where(['email' => $in['email']])
-            ->first();
-        if (!empty($user_exist)) {
-            $this->_errorRetourApi('/register/', "Un utilisateur existe déjà avec cette adresse email. Veuillez rééssayer.");
-            return;
-        }
+private
+function _notAuthenticated()
+{
+    $this->data['return_code'] = self::RETURN_CODE_ERROR_AUTH;
+    $this->data['error'] = "Echec lors de l'authentification";
+    die(json_encode($this->data));
+}
 
-        if ($in['password_confirm'] != $in['password']) {
-            $this->_errorRetourApi('/register/', "Veuillez saisir les mêmes mots de passe.");
-            return;
-        }
+private
+function _errorParameter($missing_param)
+{
+    $this->data['return_code'] = self::RETURN_CODE_ERROR_MISSING_PARAMETER;
+    $this->data['error'] = "Paramètre '$missing_param' manquant";
+    die(json_encode($this->data));
+}
 
-        $in['password'] = Security::hash($in['password'], 'sha1', true);
-
-        // Save user
-        $entity = $users_table->newEntity($in);
-        if (!$users_table->save($entity)) {
-            $this->_errorRetourApi('/register/', "Erreur lors de l'enregistrement.");
-            return;
-        }
-        $this->data['returns']['user'] = json_encode($entity);
-        die(json_encode($this->data));
-    }
-
-    // Création / connexion utilisateur google
-    public function registerGoogle()
-    {
-        $in = $this->request->data;     // En POST
-
-        $client = new Google_Client(['client_id' => self::GOOGLE_OAUTH_CLIENT_ID]);
-        $payload = $client->verifyIdToken($in['id_token']);
-
-        $data = array();
-        $data['email'] = $payload['email'];
-        $data['firstname'] = $payload['given_name'];
-        $data['lastname'] = $payload['family_name'];
-        $data['avatar'] = $payload['picture'];
-        $data['social_id'] = self::SOCIAL_ID_GOOGLE;
-        $users_table = TableRegistry::get('users');
-
-        $user_exist = $users_table->find('all')
-            ->where(array('email' => $payload['email'], 'social_id' => self::SOCIAL_ID_GOOGLE))
-            ->first();
-
-        // Si l'utilisateur google est déjà enregistré, on renvoi les infos de l'user, sinon on le crée en base
-        if(!empty($user_exist)){
-            $this->data['returns']['user'] = json_encode($user_exist);
-        }else{
-            $entity = $users_table->newEntity($data);
-            $save_user = $users_table->save($entity);
-            if ($save_user) {
-                $this->data['returns']['user'] = json_encode($entity);
-            } else {
-                $this->_errorRetourApi('/registerGoogle/', "Erreur d'ajout de l'utilisateur.");
-                return;
-            }
-        }
-
-        die(json_encode($this->data));
-    }
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // RETOURS ERREURS
-
-    private function _notAuthenticated()
-    {
-        $this->data['return_code'] = self::RETURN_CODE_ERROR_AUTH;
-        $this->data['error'] = "Echec lors de l'authentification";
-        die(json_encode($this->data));
-    }
-
-    private function _errorParameter($missing_param)
-    {
-        $this->data['return_code'] = self::RETURN_CODE_ERROR_MISSING_PARAMETER;
-        $this->data['error'] = "Paramètre '$missing_param' manquant";
-        die(json_encode($this->data));
-    }
-
-    private function _errorRetourApi($url_api, $error_supp = "")
-    {
-        $this->data['return_code'] = self::RETURN_CODE_ERROR_RETOUR_API;
-        $this->data['error'] = "L'API n'a retourné aucune données, ou une donnée non valide. (URL : " . $url_api . "). " . ((!empty($error_supp)) ? "Infos erreur supp : " . $error_supp : "");
-        die(json_encode($this->data));
-    }
+private
+function _errorRetourApi($url_api, $error_supp = "")
+{
+    $this->data['return_code'] = self::RETURN_CODE_ERROR_RETOUR_API;
+    $this->data['error'] = "L'API n'a retourné aucune données, ou une donnée non valide. (URL : " . $url_api . "). " . ((!empty($error_supp)) ? "Infos erreur supp : " . $error_supp : "");
+    die(json_encode($this->data));
+}
 
 }
