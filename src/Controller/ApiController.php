@@ -87,10 +87,14 @@ class ApiController extends AppController
                     'rId' => $recetteId,
                     'Accept' => 'application/json'
                 ]);
+                if(empty($response->json) && $response->isOk()){
+                    $this->_errorRetourApi($url);
+                    return;
+                }
                 if (empty($response->json['recipe'])) {
                     $this->_errorRetourApi('https://cors-anywhere.herokuapp.com/http://food2fork.com/api/get', "Paramètres POST : key = " . self::API_KEY_FOOD . " | rID : " . $recetteId . " | Accept : application/json");
                     return;
-                }
+                }            
                 $this->data['returns']['recipe'][$key] = $response->json['recipe'];
             }
         }
@@ -116,6 +120,10 @@ class ApiController extends AppController
 
             $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "?apiKey=" . self::API_KEY_DRINKS;
             $responseAlcohol = $http->get($urlAlcohol);
+            if(empty($responseAlcohol->json) && $responseAlcohol->isOk()){
+                $this->_errorRetourApi($url);
+                return;
+            }
             if ($responseAlcohol->json['totalResult'] == 0) {
                 $this->_errorRetourApi($urlAlcohol);
                 return;
@@ -147,6 +155,10 @@ class ApiController extends AppController
         $http = new Client();
         $url = "https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
         $responseSerie = $http->get($url);
+        if(empty($responseSerie->json) && $responseSerie->isOk()){
+            $this->_errorRetourApi($url);
+            return;
+        }
         if (empty($responseSerie->json['shows'])) {
             $this->_errorRetourApi($url);
             return;
@@ -210,6 +222,10 @@ class ApiController extends AppController
         $data = array();
         $http = new Client();
         $getData = $http->get('http://www.prevision-meteo.ch/services/json/' . $ville);
+        if(empty($getData->json) && $getData->isOk()){
+            $this->_errorRetourApi($url);
+            return;
+        }
         if (empty($getData->json) || !$getData) {
             $this->_errorRetourApi('http://www.prevision-meteo.ch/services/json/' . $ville);
             return;
@@ -241,6 +257,10 @@ class ApiController extends AppController
 
         $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=" . self::API_KEY_DRINKS;
         $responseAlcohol = $http->get($urlAlcohol);
+        if(empty($responseAlcohol->json) && $responseAlcohol->isOk()){
+            $this->_errorRetourApi($url);
+            return;
+        }
         if ($responseAlcohol->json['totalResult'] == 0) {
             $this->_errorRetourApi($urlAlcohol);
             return;
@@ -269,6 +289,10 @@ class ApiController extends AppController
 
         $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=" . self::API_KEY_DRINKS;
         $responseNotAlcohol = $http->get($urlNotAlcohol);
+        if(empty($responseNotAlcohol->json) && $responseNotAlcohol->isOk()){
+            $this->_errorRetourApi($url);
+            return;
+        }
         if ($responseNotAlcohol->json['totalResult'] == 0) {
             $this->_errorRetourApi($urlNotAlcohol);
             return;
@@ -292,6 +316,13 @@ class ApiController extends AppController
         $http = new Client();
         $url = "http://food2fork.com/api/search?key=" . self::API_KEY_FOOD . "&Accept=application/json";
         $responseFood = $http->get($url);
+        if(empty($responseFood->json) && $responseFood->isOk()){
+            $this->_errorRetourApi($url);
+            return;
+        }
+        if($responseFood->json['error'] == 'limit'){
+            return $data[0]['error'] = 'limite atteinte';
+        }
         if ($responseFood->json['count'] == 0) {
             $this->_errorRetourApi($url);
             return;
@@ -325,6 +356,10 @@ function getSeriesRandom()
     $http = new Client();
     $url = "https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
     $responseSerie = $http->get($url);
+    if(empty($responseSerie->json) && $responseSerie->isOk()){
+        $this->_errorRetourApi($url);
+        return;
+    }
     if (empty($responseSerie->json['shows'])) {
         $this->_errorRetourApi($url);
         return;
