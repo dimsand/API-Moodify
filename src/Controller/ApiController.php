@@ -36,7 +36,7 @@ class ApiController extends AppController
 
     public function beforeFilter(Event $event)
     {
-        header('Content-Type: application/json');
+        //header('Content-Type: application/json');
         $this->autoRender = false;
         $this->layoutAjax = true;
         $this->viewBuilder()->setLayout('json');
@@ -64,7 +64,7 @@ class ApiController extends AppController
             if (!empty($this->data['returns']['weather'])) {
                 $this->data['returns']['drink_alcohol'] = $this->getAlcoholDrink($this->data['returns']['weather']['condition_key']);
                 $this->data['returns']['drink_not_alcohol'] = $this->getNotAlcoholDrink($this->data['returns']['weather']['condition_key']);
-                $this->data['returns']['activity'] = $this->getActivityByWeather($this->data['returns']['weather']['condition_key']);
+                $this->data['returns']['activities'] = $this->getActivityByWeather($this->data['returns']['weather']['condition_key']);
             }
             $this->data['returns']['recipe'] = $this->getRecipeRandom();
             $this->data['returns']['series'] = $this->getSeriesRandom();
@@ -187,7 +187,7 @@ class ApiController extends AppController
                     $same_activity = false;
                 }
             }
-            $this->data['returns']['activity'][1] = $activities[$activity2]->name;
+            $this->data['returns']['activities'][1] = $activities[$activity2]->name;
         }
         die(json_encode($this->data));
     }
@@ -246,7 +246,7 @@ class ApiController extends AppController
         $nAlcohol = rand(0, $nbAlcohol);
 
         $data['name'] = $responseAlcohol->json['result'][$nAlcohol]['name'];
-        $data['url_video'] = $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
+        $data['url_video'] = "https://www.youtube.com/embed/".$responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
 
         return $data;
     }
@@ -273,7 +273,7 @@ class ApiController extends AppController
         $nNotAlcohol = rand(0, $nbNotAlcohol);
 
         $data['name'] = $responseNotAlcohol->json['result'][$nNotAlcohol]['name'];
-        $data['url_video'] = $responseNotAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
+        $data['url_video'] = "https://www.youtube.com/embed/".$responseNotAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
 
         return $data;
     }
@@ -296,13 +296,13 @@ class ApiController extends AppController
             $this->_errorRetourApi($url);
             return;
         } else {
-            for ($i = 0; $i < 4; $i++) {
+            for ($i = 0; $i < 3; $i++) {
                 $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
                 $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
                 if (!empty($responseFood->json['recipes'][$i]['image_url']) && $responseFood->json['recipes'][$i]['image_url'] != null) {
-                    $data['image'] = $responseFood->json['recipes'][$i]['image_url'];
+                    $data[$i]['image'] = $responseFood->json['recipes'][$i]['image_url'];
                 } else {
-                    $data['image'] = "http://via.placeholder.com/150x300?text=No image";
+                    $data[$i]['image'] = "http://via.placeholder.com/150x300?text=No image";
                 }
                 $data[$i]['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
             }
