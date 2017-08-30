@@ -1,8 +1,8 @@
 {
     "name": "cakephp/app",
-    "description": "CakePHP skeleton app",
-    "homepage": "https://cakephp.org",
-    "type": "project",
+    "description": "API Moodify",
+    "homepage": "https://www.moodify.com",
+    "type": "hackaton project school",
     "license": "MIT",
     "require": {
         "php": ">=5.6",
@@ -11,7 +11,8 @@
         "cakephp/migrations": "~1.0",
         "cakephp/plugin-installer": "~1.0",
         "josegonzalez/dotenv": "2.*",
-        "erwane/cakephp-token": "~1"
+        "erwane/cakephp-token": "~1",
+        "google/apiclient": "^2.2"
     },
     "require-dev": {
         "psy/psysh": "@stable",
@@ -27,7 +28,8 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src"
+            "App\\": "src",
+            "Google\\": "./vendor/google/apiclient"
         }
     },
     "autoload-dev": {
