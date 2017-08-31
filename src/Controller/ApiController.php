@@ -163,6 +163,10 @@ class ApiController extends AppController
             for ($i = 0; $i < 4; $i++) {
                 $rand = rand(0, count($responseSerie->json['movies']) - 4);
                 $this->data['returns']['media'][$i] = $responseSerie->json['movies'][$rand];
+
+                $urlPoster = "https://api.betaseries.com/movies/movie?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
+                $responseSeriePoster = $http->get($urlPoster);
+                $this->data['returns']['media'][$i]['poster'] = $responseSeriePoster->json['movie']['poster'];
             }
         } else if ($type_media == "serie" || $type_media == "série") {
             $url = "http://api.betaseries.com/shows/discover?key=cb1d200d4a43&type=popular";
@@ -174,6 +178,10 @@ class ApiController extends AppController
             for ($i = 0; $i < 4; $i++) {
                 $rand = rand(0, count($responseSerie->json['shows']) - 4);
                 $this->data['returns']['media'][$i] = $responseSerie->json['shows'][$rand];
+
+                $urlPoster = "https://api.betaseries.com/shows/display?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
+                $responseSeriePoster = $http->get($urlPoster);
+                $this->data['returns']['media'][$i]['poster'] = $responseSeriePoster->json['show']['images']['show'];
             }
         }
         die(json_encode($this->data));
@@ -223,6 +231,11 @@ class ApiController extends AppController
         for ($i = 0; $i < 4; $i++) {
             $rand = rand(0, count($responseSerie->json['movies']) - 4);
             $this->data['returns']['movies'][$i] = $responseSerie->json['movies'][$rand];
+
+            $urlPoster = "https://api.betaseries.com/movies/movie?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
+            $responseSeriePoster = $http->get($urlPoster);
+            $this->data['returns']['movies'][$i]['poster'] = $responseSeriePoster->json['movie']['poster'];
+
         }
         die(json_encode($this->data));
     }
