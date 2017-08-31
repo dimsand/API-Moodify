@@ -37,6 +37,7 @@ class ApiController extends AppController
     public function beforeFilter(Event $event)
     {
         //header('Content-Type: application/json');
+        header('Access-Control-Allow-Origin: *');
         $this->autoRender = false;
         $this->layoutAjax = true;
         $this->viewBuilder()->setLayout('json');
@@ -204,6 +205,40 @@ class ApiController extends AppController
             }
             $this->data['returns']['activities'][2] = $activities[$activity3]->name;
         }
+        die(json_encode($this->data));
+    }
+
+    // Retourne la recette en fonction de l'ID/des ID de la/les recette en paramètre
+    public function speech()
+    {
+
+        $in = $this->request->data;
+
+        $http = new Client();
+        
+        $response = $http->post('https://api.api.ai/v1/query?v=20150910', [
+            'query' => $in['text'],
+            'lang' => "en",
+            'sessionId' => 'somerandomthing',
+            ['headers' => 
+                [
+                'Access-Control-Allow-Origin' => "*",
+                'Content-Type' => 'application/json; charset=utf-8',
+                'Authorization' => "Bearer 4b8289d60d15475f8380de1d4086aff6"
+                ]
+            ]
+        ]);
+debug($response->json); exit();
+        if(empty($response->json) && $response->isOk()){
+            $this->_errorRetourApi($url);
+            return;
+        }
+        if (empty($response->json['recipe'])) {
+            $this->_errorRetourApi('https://cors-anywhere.herokuapp.com/http://food2fork.com/api/get', "Paramètres POST : key = " . self::API_KEY_FOOD . " | rID : " . $recetteId . " | Accept : application/json");
+            return;
+        }            
+
+        $this->data['returns']['recipe'][$key] = $response->json['recipe'];
         die(json_encode($this->data));
     }
 
