@@ -162,7 +162,7 @@ class ApiController extends AppController
             }
             for ($i = 0; $i < 4; $i++) {
                 $rand = rand(0, count($responseSerie->json['movies']) - 4);
-                $this->data['returns']['movies'][$i] = $responseSerie->json['movies'][$rand];
+                $this->data['returns']['media'][$i] = $responseSerie->json['movies'][$rand];
             }
         } else if ($type_media == "serie" || $type_media == "série") {
             $url = "http://api.betaseries.com/shows/discover?key=cb1d200d4a43&type=popular";
@@ -173,7 +173,7 @@ class ApiController extends AppController
             }
             for ($i = 0; $i < 4; $i++) {
                 $rand = rand(0, count($responseSerie->json['shows']) - 4);
-                $this->data['returns']['shows'][$i] = $responseSerie->json['shows'][$rand];
+                $this->data['returns']['media'][$i] = $responseSerie->json['shows'][$rand];
             }
         }
         die(json_encode($this->data));
