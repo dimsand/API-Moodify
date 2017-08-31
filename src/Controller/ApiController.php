@@ -167,6 +167,7 @@ class ApiController extends AppController
                 $urlPoster = "https://api.betaseries.com/movies/movie?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
                 $responseSeriePoster = $http->get($urlPoster);
                 $this->data['returns']['media'][$i]['poster'] = $responseSeriePoster->json['movie']['poster'];
+                $this->data['returns']['media'][$i]['description'] = $responseSeriePoster->json['movie']['synopsis'];
             }
         } else if ($type_media == "serie" || $type_media == "série") {
             $url = "http://api.betaseries.com/shows/discover?key=cb1d200d4a43&type=popular";
@@ -182,6 +183,7 @@ class ApiController extends AppController
                 $urlPoster = "https://api.betaseries.com/shows/display?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
                 $responseSeriePoster = $http->get($urlPoster);
                 $this->data['returns']['media'][$i]['poster'] = $responseSeriePoster->json['show']['images']['show'];
+                $this->data['returns']['media'][$i]['description'] = $responseSeriePoster->json['show']['description'];
             }
         }
         die(json_encode($this->data));
@@ -235,6 +237,7 @@ class ApiController extends AppController
             $urlPoster = "https://api.betaseries.com/movies/movie?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
             $responseSeriePoster = $http->get($urlPoster);
             $this->data['returns']['movies'][$i]['poster'] = $responseSeriePoster->json['movie']['poster'];
+            $this->data['returns']['movies'][$i]['description'] = $responseSeriePoster->json['movie']['synopsis'];
 
         }
         die(json_encode($this->data));
