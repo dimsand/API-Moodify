@@ -150,27 +150,30 @@ class ApiController extends AppController
     }
 
     // Retourne une série aléatoire
-    public function serie()
+    public function TV($type_media)
     {
         $http = new Client();
-        $url = "https://api.betaseries.com/shows/random?nb=100&key=cb1d200d4a43";
-        $responseSerie = $http->get($url);
-        if (empty($responseSerie->json) && $responseSerie->isOk()) {
-            $this->_errorRetourApi($url);
-            return;
-        }
-        if (empty($responseSerie->json['shows'])) {
-            $this->_errorRetourApi($url);
-            return;
-        } else {
-            $nbSeries = count($responseSerie->json['shows']);
-            $nSeries = rand(0, $nbSeries);
-            $this->data['returns']['series']['title'] = $responseSerie->json['shows'][$nSeries]['title'];
-            $this->data['returns']['series']['description'] = $responseSerie->json['shows'][$nSeries]['description'];
-            if (!empty($responseSerie->json['shows'][$nSeries]['images']['poster']) && $responseSerie->json['shows'][$nSeries]['images']['poster'] != null) {
-                $this->data['returns']['series']['image'] = $responseSerie->json['shows'][$nSeries]['images']['poster'];
-            } else {
-                $this->data['returns']['series']['image'] = "http://via.placeholder.com/150x300?text=No image";
+        if ($type_media == "film") {
+            $url = "http://api.betaseries.com/movies/discover?key=cb1d200d4a43&type=popular";
+            $responseSerie = $http->get($url);
+            if (empty($responseSerie->json) && $responseSerie->isOk()) {
+                $this->_errorRetourApi($url);
+                return;
+            }
+            for ($i = 0; $i < 4; $i++) {
+                $rand = rand(0, count($responseSerie->json['movies']) - 4);
+                $this->data['returns']['movies'][$i] = $responseSerie->json['movies'][$rand];
+            }
+        } else if ($type_media == "serie" || $type_media == "série") {
+            $url = "http://api.betaseries.com/shows/discover?key=cb1d200d4a43&type=popular";
+            $responseSerie = $http->get($url);
+            if (empty($responseSerie->json) && $responseSerie->isOk()) {
+                $this->_errorRetourApi($url);
+                return;
+            }
+            for ($i = 0; $i < 4; $i++) {
+                $rand = rand(0, count($responseSerie->json['shows']) - 4);
+                $this->data['returns']['shows'][$i] = $responseSerie->json['shows'][$rand];
             }
         }
         die(json_encode($this->data));
@@ -207,26 +210,20 @@ class ApiController extends AppController
         die(json_encode($this->data));
     }
 
-    // Retourne la recette en fonction de l'ID/des ID de la/les recette en paramètre
-    public function speech()
+    // Retourne une activité aléatoire
+    public function upcomingMovies()
     {
-
-        $in = $this->request->data;
-        $accessToken = "4b8289d60d15475f8380de1d4086aff6";
-        $http = new Client([
-            'headers' => ['Authorization' => 'Bearer ' . $accessToken],
-            'Access-Control-Allow-Origin' => '*',
-        ]);
-
-        $response = $http->post('https://api.api.ai/v1/query?v=20150910', [
-            $in
-        ]);
-        debug($response->json);
-        if ($response->json['status']['code'] != 200 && $response->isOk()) {
-            $this->_errorRetourApi('https://api.api.ai/v1/query?v=20150910');
+        $http = new Client();
+        $url = "http://api.betaseries.com/movies/discover?key=cb1d200d4a43&type=upcoming";
+        $responseSerie = $http->get($url);
+        if (empty($responseSerie->json) && $responseSerie->isOk()) {
+            $this->_errorRetourApi($url);
             return;
         }
-        $this->data['returns']['recipe'] = $response->json['recipe'];
+        for ($i = 0; $i < 4; $i++) {
+            $rand = rand(0, count($responseSerie->json['movies']) - 4);
+            $this->data['returns']['movies'][$i] = $responseSerie->json['movies'][$rand];
+        }
         die(json_encode($this->data));
     }
 
@@ -257,12 +254,68 @@ class ApiController extends AppController
             $this->_errorRetourApi('http://www.prevision-meteo.ch/services/json/' . $ville, $getData->json['errors'][0]['text'] . ". " . $getData->json['errors'][0]['description']);
             return;
         }
-        $data['ville'] = $ville;
+        $data['ville'] = $getData->json['city_info']['name'];
         $data['condition'] = $getData->json['current_condition']['condition'];
         $data['condition_key'] = $getData->json['current_condition']['condition_key'];
         $data['tmp'] = $getData->json['current_condition']['tmp'];
         $data['humidity'] = $getData->json['current_condition']['humidity'];
 
+        switch ($getData->json['current_condition']['wnd_dir']) {
+            case "N":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ↑";
+                break;
+            case "S":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ↓";
+                break;
+            case "E":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h →";
+                break;
+            case "O":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ←";
+                break;
+            case "NE":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ↗";
+                break;
+            case "NO":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ↖";
+                break;
+            case "SE":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ↘";
+                break;
+            case "SO":
+                $data['wind'] = $getData->json['current_condition']['wnd_spd'] . "km/h ↙";
+                break;
+        }
+
+        return $data;
+    }
+
+    // Retourne la recette en fonction de l'ID/des ID de la/les recette en paramètre
+    public function getIngredientsFood($recette_id = null)
+    {
+        $data = array();
+        $http = new Client();
+        if (empty($recette_id)) {
+            $this->_errorParameter('recette (id des recettes à afficher)');
+            return;
+        } else {
+            $response = $http->post('http://food2fork.com/api/get', [
+                'key' => self::API_KEY_FOOD,
+                'rId' => $recette_id,
+                'Accept' => 'application/json'
+            ]);
+            if (empty($response->json) && $response->isOk()) {
+                $this->_errorRetourApi('http://food2fork.com/api/get');
+                return;
+            }
+            if (empty($response->json['recipe'])) {
+                $this->_errorRetourApi('https://cors-anywhere.herokuapp.com/http://food2fork.com/api/get', "Paramètres POST : key = " . self::API_KEY_FOOD . " | rID : " . $recette_id . " | Accept : application/json");
+                return;
+            }
+            foreach ($response->json['recipe']['ingredients'] as $key => $ingredient) {
+                $data[$key] = $ingredient;
+            }
+        }
         return $data;
     }
 
@@ -281,7 +334,7 @@ class ApiController extends AppController
         $urlAlcohol = "http://addb.absolutdrinks.com/drinks/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=" . self::API_KEY_DRINKS;
         $responseAlcohol = $http->get($urlAlcohol);
         if (empty($responseAlcohol->json) && $responseAlcohol->isOk()) {
-            $this->_errorRetourApi($url);
+            $this->_errorRetourApi($urlAlcohol);
             return;
         }
         if ($responseAlcohol->json['totalResult'] == 0) {
@@ -313,7 +366,7 @@ class ApiController extends AppController
         $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "/for/" . $period_date . $with_ice_cubes . "?apiKey=" . self::API_KEY_DRINKS;
         $responseNotAlcohol = $http->get($urlNotAlcohol);
         if (empty($responseNotAlcohol->json) && $responseNotAlcohol->isOk()) {
-            $this->_errorRetourApi($url);
+            $this->_errorRetourApi($urlNotAlcohol);
             return;
         }
         if ($responseNotAlcohol->json['totalResult'] == 0) {
@@ -364,6 +417,9 @@ class ApiController extends AppController
                 $data[$i]['difficulty'] = (int)($responseFood->json['recipes'][$i]['social_rank'] / (9 + lcg_value() * (abs(11 - 9))));
                 $data[$i]['duration_preparation'] = rand(15, 60);
                 $data[$i]['cost'] = $responseFood->json['recipes'][$i]['social_rank'] / (9 + lcg_value() * (abs(13 - 9)));
+
+                // Ingrédients
+                $data[$i]['ingredients'] = $this->getIngredientsFood($responseFood->json['recipes'][$i]['recipe_id']);
             }
         }
         return $data;
