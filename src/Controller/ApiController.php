@@ -19,7 +19,7 @@ class ApiController extends AppController
 
     const API_KEY_WEATHER = "6deb28875db5aae777450b29bda0f889";
     const API_KEY_DRINKS = "328da11a6e5144929f6bf83e1dc9e5da";
-    const API_KEY_FOOD = "1db14a055d0691b833f56085dfd7eb57";
+    const API_KEY_FOOD = "fe8ffbf8d109381519c5ad5530af264a";
 
     const GOOGLE_OAUTH_CLIENT_ID = '724346200475-sj3iure20vb2mse5m6ogjtsg9kb5qma2.apps.googleusercontent.com';
     const GOOGLE_OAUTH_CLIENT_SECRET = 'Vf5JkHeTmcXUxQHyJFVfNro9';
@@ -102,9 +102,9 @@ class ApiController extends AppController
     }
 
     // Retourne 4 recettes aléatoires
-    public function food()
+    public function food($ingredient)
     {
-        $recipes = $this->getRecipeRandom();
+        $recipes = $this->getRecipeRandom($ingredient);
         $this->data['returns']['recipes'] = $recipes;
         die(json_encode($this->data));
     }
@@ -132,7 +132,7 @@ class ApiController extends AppController
             $nAlcohol = rand(0, $nbAlcohol);
 
             $this->data['returns']['drink_alcohol']['name'] = $responseAlcohol->json['result'][$nAlcohol]['name'];
-            $this->data['returns']['drink_alcohol']['url_video'] = $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
+            $this->data['returns']['drink_alcohol']['url_video'] = "https://www.youtube.com/embed/" . $responseAlcohol->json['result'][$nAlcohol]['videos'][0]['video'];
 
             $urlNotAlcohol = "http://addb.absolutdrinks.com/drinks/not/alcoholic/tasting/" . $taste . "?apiKey=" . self::API_KEY_DRINKS;
             $responseNotAlcohol = $http->get($urlNotAlcohol);
@@ -144,7 +144,7 @@ class ApiController extends AppController
             $nNotAlcohol = rand(0, $nbNotAlcohol);
 
             $this->data['returns']['drink_not_alcohol']['name'] = $responseAlcohol->json['result'][$nNotAlcohol]['name'];
-            $this->data['returns']['drink_not_alcohol']['url_video'] = $responseAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
+            $this->data['returns']['drink_not_alcohol']['url_video'] = "https://www.youtube.com/embed/" . $responseAlcohol->json['result'][$nNotAlcohol]['videos'][0]['video'];
         }
         die(json_encode($this->data));
     }
@@ -200,7 +200,7 @@ class ApiController extends AppController
             return;
         } else {
             $activity1 = rand(0, (count($activities) - 1));
-            $this->data['returns']['activity'][0] = $activities[$activity1]->name;
+            $this->data['returns']['activities'][0] = $activities[$activity1]->name;
             $same_activity = true;
             while ($same_activity) {
                 $activity2 = rand(0, (count($activities) - 1));
@@ -208,6 +208,7 @@ class ApiController extends AppController
                     $same_activity = false;
                 }
             }
+            $this->data['returns']['activities'][1] = $activities[$activity2]->name;
             $same_activity = true;
             while ($same_activity) {
                 $activity3 = rand(0, (count($activities) - 1));
@@ -402,41 +403,42 @@ class ApiController extends AppController
      * @param string $ingredient
      * @return array|void de 4 recettes avec l'ingrédient envoyé en paramètre
      */
-    public function getRecipeRandom()
+    public function getRecipeRandom($ingredient = null)
     {
         $data = array();
         $http = new Client();
-        $url = "http://food2fork.com/api/search?key=" . self::API_KEY_FOOD . "&Accept=application/json";
+        $url = "http://food2fork.com/api/search?key=" . self::API_KEY_FOOD . "&Accept=application/json".((!is_null($ingredient))?"&q=".$ingredient:"");
         $responseFood = $http->get($url);
         if (empty($responseFood->json) && $responseFood->isOk()) {
             $this->_errorRetourApi($url);
             return;
         }
-        if (!empty($responseFood->json['error']) && $responseFood->json['error'] == 'limit') {
+        /*if (!empty($responseFood->json['error']) && $responseFood->json['error'] == 'limit') {
             return $data[0]['error'] = 'limite atteinte';
-        }
-        if ($responseFood->json['count'] == 0) {
-            $this->_errorRetourApi($url);
-            return;
-        } else {
-            $nb_aleatoire = rand(0, 26);
-            for ($i = $nb_aleatoire; $i < ($nb_aleatoire + 3); $i++) {
-                $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
-                $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
-                $data[$i]['social_rank'] = $responseFood->json['recipes'][$i]['social_rank'];
-                if (!empty($responseFood->json['recipes'][$i]['image_url']) && $responseFood->json['recipes'][$i]['image_url'] != null) {
-                    $data[$i]['image'] = $responseFood->json['recipes'][$i]['image_url'];
-                } else {
-                    $data[$i]['image'] = "http://via.placeholder.com/150x300?text=No image";
-                }
-                $data[$i]['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
-                $data[$i]['difficulty'] = (int)($responseFood->json['recipes'][$i]['social_rank'] / (9 + lcg_value() * (abs(11 - 9))));
-                $data[$i]['duration_preparation'] = rand(15, 60);
-                $data[$i]['cost'] = $responseFood->json['recipes'][$i]['social_rank'] / (9 + lcg_value() * (abs(13 - 9)));
-
-                // Ingrédients
-                $data[$i]['ingredients'] = $this->getIngredientsFood($responseFood->json['recipes'][$i]['recipe_id']);
+        }*/
+        if(!empty($responseFood->json['error'])){
+            if ($responseFood->json['error'] == 'limit') {
+                //$this->_errorRetourApi($url);
+                return $data[0]['error'] = 'limite atteinte';
             }
+        }
+        $nb_aleatoire = rand(0, $responseFood->json['count'] - 3);
+        for ($i = $nb_aleatoire; $i < ($nb_aleatoire + 3); $i++) {
+            $data[$i]['recipe_id'] = $responseFood->json['recipes'][$i]['recipe_id'];
+            $data[$i]['title'] = $responseFood->json['recipes'][$i]['title'];
+            $data[$i]['social_rank'] = $responseFood->json['recipes'][$i]['social_rank'];
+            if (!empty($responseFood->json['recipes'][$i]['image_url']) && $responseFood->json['recipes'][$i]['image_url'] != null) {
+                $data[$i]['image'] = $responseFood->json['recipes'][$i]['image_url'];
+            } else {
+                $data[$i]['image'] = "http://via.placeholder.com/150x300?text=No image";
+            }
+            $data[$i]['source_url'] = $responseFood->json['recipes'][$i]['source_url'];
+            $data[$i]['difficulty'] = (int)($responseFood->json['recipes'][$i]['social_rank'] / (9 + lcg_value() * (abs(11 - 9))));
+            $data[$i]['duration_preparation'] = rand(15, 60);
+            $data[$i]['cost'] = $responseFood->json['recipes'][$i]['social_rank'] / (9 + lcg_value() * (abs(13 - 9)));
+
+            // Ingrédients
+            $data[$i]['ingredients'] = $this->getIngredientsFood($responseFood->json['recipes'][$i]['recipe_id']);
         }
         return $data;
     }
@@ -489,8 +491,7 @@ class ApiController extends AppController
                 ->where(['weather' => $weather])
                 ->toArray();
             if (empty($activities)) {
-                $this->_errorRetourApi(null);
-                return;
+                return $data[0]['error'] = "no activities";
             } else {
                 $activity1 = rand(0, (count($activities) - 1));
                 array_push($data, $activities[$activity1]->name);
