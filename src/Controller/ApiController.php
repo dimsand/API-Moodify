@@ -461,13 +461,12 @@ class ApiController extends AppController
      * @return array|void de 2 activités en fonction de la météo
      */
     public
-    function getActivityByWeather($weather_condition_key)
+    function getActivityByWeather($weather)
     {
-        if (is_null($weather_condition_key)) {
-            $this->_errorParameter('weather_condition_key (Snow, Rainy)');
+        if (is_null($weather)) {
+            $this->_errorParameter('weather (Snow, Rainy)');
             return;
         } else {
-            $weather = $this->_getWeatherByConditionWeather($weather_condition_key);
             $data = array();
             $activities_table = TableRegistry::get('activity');
             $activities = $activities_table->find('all')
