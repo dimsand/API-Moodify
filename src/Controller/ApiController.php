@@ -180,7 +180,7 @@ class ApiController extends AppController
                 $rand = rand(0, count($responseSerie->json['shows']) - 4);
                 $this->data['returns']['media'][$i] = $responseSerie->json['shows'][$rand];
 
-                $urlPoster = "https://api.betaseries.com/shows/display?key=cb1d200d4a43&id=".$responseSerie->json['movies'][$rand]['id'];
+                $urlPoster = "https://api.betaseries.com/shows/display?key=cb1d200d4a43&id=".$responseSerie->json['shows'][$rand]['id'];
                 $responseSeriePoster = $http->get($urlPoster);
                 $this->data['returns']['media'][$i]['poster'] = $responseSeriePoster->json['show']['images']['show'];
                 $this->data['returns']['media'][$i]['description'] = $responseSeriePoster->json['show']['description'];
