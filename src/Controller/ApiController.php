@@ -19,7 +19,7 @@ class ApiController extends AppController
 
     const API_KEY_WEATHER = "6deb28875db5aae777450b29bda0f889";
     const API_KEY_DRINKS = "328da11a6e5144929f6bf83e1dc9e5da";
-    const API_KEY_FOOD = "fe8ffbf8d109381519c5ad5530af264a";
+    const API_KEY_FOOD = "527fefc488fc4e3f81e5d4204daa88de";
 
     const GOOGLE_OAUTH_CLIENT_ID = '724346200475-sj3iure20vb2mse5m6ogjtsg9kb5qma2.apps.googleusercontent.com';
     const GOOGLE_OAUTH_CLIENT_SECRET = 'Vf5JkHeTmcXUxQHyJFVfNro9';
